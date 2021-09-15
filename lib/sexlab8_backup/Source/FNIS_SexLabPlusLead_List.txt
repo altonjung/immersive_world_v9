@@ -1,0 +1,104 @@
+Version V1.63
+
+'
+' Prostitute Fore Animation
+'
+s SP_Boobjob_A1_S1 SP_Boobjob_A1_S1.hkx
++ SP_Boobjob_A1_S2 SP_Boobjob_A1_S2.hkx
++ SP_Boobjob_A1_S3 SP_Boobjob_A1_S3.hkx
++ SP_Boobjob_A1_S4 SP_Boobjob_A1_S4.hkx
+s SP_Boobjob_A2_S1 SP_Boobjob_A2_S1.hkx
++ SP_Boobjob_A2_S2 SP_Boobjob_A2_S2.hkx
++ SP_Boobjob_A2_S3 SP_Boobjob_A2_S3.hkx
++ SP_Boobjob_A2_S4 SP_Boobjob_A2_S4.hkx
+
+s SP_FootJob_A1_S1 SP_FootJob_A1_S1.hkx
++ SP_FootJob_A1_S2 SP_FootJob_A1_S2.hkx
++ SP_FootJob_A1_S3 SP_FootJob_A1_S3.hkx
++ SP_FootJob_A1_S4 SP_FootJob_A1_S4.hkx
++ SP_FootJob_A1_S5 SP_FootJob_A1_S5.hkx
+s SP_FootJob_A2_S1 SP_FootJob_A2_S1.hkx
++ SP_FootJob_A2_S2 SP_FootJob_A2_S2.hkx
++ SP_FootJob_A2_S3 SP_FootJob_A2_S3.hkx
++ SP_FootJob_A2_S4 SP_FootJob_A2_S4.hkx
++ SP_FootJob_A2_S5 SP_FootJob_A2_S5.hkx
+
+s SP_LayingBlowjob_A1_S1 SP_LayingBlowjob_A1_S1.hkx
++ SP_LayingBlowjob_A1_S2 SP_LayingBlowjob_A1_S2.hkx
++ SP_LayingBlowjob_A1_S3 SP_LayingBlowjob_A1_S3.hkx
++ SP_LayingBlowjob_A1_S4 SP_LayingBlowjob_A1_S4.hkx
++ SP_LayingBlowjob_A1_S5 SP_LayingBlowjob_A1_S5.hkx
+s SP_LayingBlowjob_A2_S1 SP_LayingBlowjob_A2_S1.hkx
++ SP_LayingBlowjob_A2_S2 SP_LayingBlowjob_A2_S2.hkx
++ SP_LayingBlowjob_A2_S3 SP_LayingBlowjob_A2_S3.hkx
++ SP_LayingBlowjob_A2_S4 SP_LayingBlowjob_A2_S4.hkx
++ SP_LayingBlowjob_A2_S5 SP_LayingBlowjob_A2_S5.hkx
+
+'
+' Loving Fore Animation
+'
+s SP_LoveKissing_01_A1_S1 SP_LoveKissing_01_A1_S1.hkx
++ SP_LoveKissing_01_A1_S2 SP_LoveKissing_01_A1_S2.hkx
++ SP_LoveKissing_01_A1_S3 SP_LoveKissing_01_A1_S3.hkx
++ SP_LoveKissing_01_A1_S4 SP_LoveKissing_01_A1_S4.hkx
++ SP_LoveKissing_01_A1_S5 SP_LoveKissing_01_A1_S5.hkx
+s SP_LoveKissing_01_A2_S1 SP_LoveKissing_01_A2_S1.hkx
++ SP_LoveKissing_01_A2_S2 SP_LoveKissing_01_A2_S2.hkx
++ SP_LoveKissing_01_A2_S3 SP_LoveKissing_01_A2_S3.hkx
++ SP_LoveKissing_01_A2_S4 SP_LoveKissing_01_A2_S4.hkx
++ SP_LoveKissing_01_A2_S5 SP_LoveKissing_01_A2_S5.hkx
+
+s SP_LoveSitting_01_A1_S1 SP_LoveSitting_01_A1_S1.hkx
++ SP_LoveSitting_01_A1_S2 SP_LoveSitting_01_A1_S2.hkx
++ SP_LoveSitting_01_A1_S3 SP_LoveSitting_01_A1_S3.hkx
++ SP_LoveSitting_01_A1_S4 SP_LoveSitting_01_A1_S4.hkx
+s SP_LoveSitting_01_A2_S1 SP_LoveSitting_01_A2_S1.hkx
++ SP_LoveSitting_01_A2_S2 SP_LoveSitting_01_A2_S2.hkx
++ SP_LoveSitting_01_A2_S3 SP_LoveSitting_01_A2_S3.hkx
++ SP_LoveSitting_01_A2_S4 SP_LoveSitting_01_A2_S4.hkx
+
+s SP_LoveLaying_01_A1_S1 SP_LoveLaying_01_A1_S1.hkx
++ SP_LoveLaying_01_A1_S2 SP_LoveLaying_01_A1_S2.hkx
++ SP_LoveLaying_01_A1_S3 SP_LoveLaying_01_A1_S3.hkx
++ SP_LoveLaying_01_A1_S4 SP_LoveLaying_01_A1_S4.hkx
+s SP_LoveLaying_01_A2_S1 SP_LoveLaying_01_A2_S1.hkx
++ SP_LoveLaying_01_A2_S2 SP_LoveLaying_01_A2_S2.hkx
++ SP_LoveLaying_01_A2_S3 SP_LoveLaying_01_A2_S3.hkx
++ SP_LoveLaying_01_A2_S4 SP_LoveLaying_01_A2_S4.hkx
+
+'
+' Aggressive Fore Animation
+'
+s SP_AggStruggle_01_A1_S1 SP_AggStruggle_01_A1_S1.hkx
++ SP_AggStruggle_01_A1_S2 SP_AggStruggle_01_A1_S2.hkx
++ SP_AggStruggle_01_A1_S3 SP_AggStruggle_01_A1_S3.hkx
+s SP_AggStruggle_01_A2_S1 SP_AggStruggle_01_A2_S1.hkx
++ SP_AggStruggle_01_A2_S2 SP_AggStruggle_01_A2_S2.hkx
++ SP_AggStruggle_01_A2_S3 SP_AggStruggle_01_A2_S3.hkx
+
+s SP_AggStruggle_02_A1_S1 SP_AggStruggle_02_A1_S1.hkx
++ SP_AggStruggle_02_A1_S2 SP_AggStruggle_02_A1_S2.hkx
++ SP_AggStruggle_02_A1_S3 SP_AggStruggle_02_A1_S3.hkx
+s SP_AggStruggle_02_A2_S1 SP_AggStruggle_02_A2_S1.hkx
++ SP_AggStruggle_02_A2_S2 SP_AggStruggle_02_A2_S2.hkx
++ SP_AggStruggle_02_A2_S3 SP_AggStruggle_02_A2_S3.hkx
+
+s SP_AggStruggle_03_A1_S1 SP_AggStruggle_03_A1_S1.hkx
++ SP_AggStruggle_03_A1_S2 SP_AggStruggle_03_A1_S2.hkx
++ SP_AggStruggle_03_A1_S3 SP_AggStruggle_03_A1_S3.hkx
+s SP_AggStruggle_03_A2_S1 SP_AggStruggle_03_A2_S1.hkx
++ SP_AggStruggle_03_A2_S2 SP_AggStruggle_03_A2_S2.hkx
++ SP_AggStruggle_03_A2_S3 SP_AggStruggle_03_A2_S3.hkx
+
+s SP_AggStruggle_04_A1_S1 SP_AggStruggle_04_A1_S1.hkx
++ SP_AggStruggle_04_A1_S2 SP_AggStruggle_04_A1_S2.hkx
++ SP_AggStruggle_04_A1_S3 SP_AggStruggle_04_A1_S3.hkx
++ SP_AggStruggle_04_A1_S4 SP_AggStruggle_04_A1_S4.hkx
++ -a SP_AggStruggle_04_A1_S5 SP_AggStruggle_04_A1_S5.hkx
++ SP_AggStruggle_04_A1_S6 SP_AggStruggle_04_A1_S6.hkx
+s SP_AggStruggle_04_A2_S1 SP_AggStruggle_04_A2_S1.hkx
++ SP_AggStruggle_04_A2_S2 SP_AggStruggle_04_A2_S2.hkx
++ SP_AggStruggle_04_A2_S3 SP_AggStruggle_04_A2_S3.hkx
++ SP_AggStruggle_04_A2_S4 SP_AggStruggle_04_A2_S4.hkx
++ -a SP_AggStruggle_04_A2_S5 SP_AggStruggle_04_A2_S5.hkx
++ SP_AggStruggle_04_A2_S6 SP_AggStruggle_04_A2_S6.hkx

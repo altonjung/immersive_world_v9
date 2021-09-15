@@ -1,0 +1,60 @@
+{
+  "animations": [
+    {
+      "actors": [
+        {
+          "add_cum": "Anal",
+          "stages": [
+            {
+              "id": "DoggyStyle_A1_S1",
+              "sndTimeSlices": "afad:0.0|10.0"
+            },
+            {
+              "id": "DoggyStyle_A1_S2"
+            },
+            {
+              "id": "DoggyStyle_A1_S3"
+            },
+            {
+              "id": "DoggyStyle_A1_S4"
+            }
+          ],
+          "type": "Female"
+        },
+        {
+          "stages": [
+            {
+              "id": "DoggyStyle_A2_S1",
+              "forward": -100,
+              "sos": 2,
+              "sndTimeSlices": "fuck:2.4|0.6,next"
+            },
+            {
+              "id": "DoggyStyle_A2_S2",
+              "forward": -100,
+              "sos": 2
+            },
+            {
+              "id": "DoggyStyle_A2_S3",
+              "forward": -100,
+              "sos": 2,
+              "sndTimeSlices": "fuck:0.2|0.43"
+            },
+            {
+              "id": "DoggyStyle_A2_S4",
+              "forward": -100,
+              "sos": 2,
+              "sndTimeSlices": "fuck:1.0|2.33"
+            }
+          ],
+          "type": "Male"
+        }
+      ],
+      "id": "SexLabDoggy",
+      "name": "SexLabDoggy",
+      "sound": "Squishing",
+      "tags": "Default,Sex,Anal,Doggystyle,Doggy,Reverse,Beds,VaginalCum"
+    }
+  ],
+  "name": "SexLab Plus"
+}
