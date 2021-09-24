@@ -186,13 +186,13 @@ function addActorStage(sslBaseAnimation anim, int actorID, int stageInfo)
   bool strapOn = JMap.getInt(stageInfo, "strap_on") as bool
   int sos = JMap.getInt(stageInfo, "sos")
   String sfxAction = JMap.getStr(stageInfo, "sfxAction")
-  String sfxOrgasmType = JMap.getStr(stageInfo, "sfxOrgasmType")
   String sfxVoiceType = JMap.getStr(stageInfo, "sfxVoiceType")
   String sfxSounds = JMap.getStr(stageInfo, "sfxSounds")
   String sfxExpressionType = JMap.getStr(stageInfo, "sfxExpressionType")
-  String sfxExpressionLevels = JMap.getStr(stageInfo, "sfxExpressionLevels")
+  bool   sfxOrgasm = JMap.getInt(stageInfo, "sfxOrgasm") as bool
+  String sfxMoanType = JMap.getStr(stageInfo, "sfxMoanType")
 
-  anim.AddPositionStage(actorID, eventID, forward=forward, side=side, up=up, rotate=rotate, silent=silent, openmouth=openmouth, strapon=strapOn, sos=sos, sfxAction=sfxAction, sfxVoiceType=sfxVoiceType, sfxSounds=sfxSounds, sfxExpressionType=sfxExpressionType, sfxExpressionLevels=sfxExpressionLevels, sfxOrgasmType=sfxOrgasmType)
+  anim.AddPositionStage(actorID, eventID, forward=forward, side=side, up=up, rotate=rotate, silent=silent, openmouth=openmouth, strapon=strapOn, sos=sos, sfxAction=sfxAction, sfxVoiceType=sfxVoiceType, sfxSounds=sfxSounds, sfxExpressionType=sfxExpressionType, sfxOrgasm=sfxOrgasm, sfxMoanType=sfxMoanType)
 
   ; TODO: SetStageCumID(int Position, int Stage, int CumID, int CumSource = -1)
 endFunction

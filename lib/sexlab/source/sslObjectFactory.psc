@@ -672,7 +672,9 @@ sslBaseVoice function CopyVoice(sslBaseVoice Copy, sslBaseVoice Orig)
 	Copy.Pain1   = Orig.Pain1
 	Copy.Pain2   = Orig.Pain2
 	Copy.Pain3   = Orig.Pain3
-	Copy.Feel    = Orig.Feel
+	Copy.Feel1    = Orig.Feel1
+	Copy.Feel2    = Orig.Feel2
+	Copy.Feel3    = Orig.Feel3
 	Copy.Moan    = Orig.Moan	
 	Copy.Orgasm  = Orig.Orgasm
 	Copy.Aggressive = Orig.Aggressive

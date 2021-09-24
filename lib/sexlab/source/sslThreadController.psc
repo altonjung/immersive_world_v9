@@ -28,7 +28,7 @@ Sound 	property SfxFuckSound auto hidden
 Sound	property SfxBedSound auto hidden
 Sound   property sfxSquishing auto hidden 
 
-bool    property hasFurnitureRole  auto hidden
+bool    property hasFurnitureRole auto hidden
 
 ; ------------------------------------------------------- ;
 ; --- Init                                 --- ;
@@ -75,46 +75,49 @@ state Prepare
 		else
 			; leadin인 경우와 아닌 경우에 대해, animation 처리
 			if LeadIn && positions.length > 1				
-				sslBaseAnimation[] _animations = sslUtility.AnimationArray(128)
+				int[] _aniTagIds = new int[128]
 				int tagid = 0
 				int idx = 0
 
-				if Victims.length > 0				
+				log("relation Rank " + positions[0].GetRelationshipRank(positions[1]))
+				if Victims.length > 0
 					while tagid < Animations.length
 						if Animations[tagid].HasTag("Rape")
-							_animations[idx] = Animations[tagid]
+							_aniTagIds[idx] = tagid
 							idx +=1
 						endIf
 						tagid += 1
 					endWhile
 				
-					log("it is rape " + idx)		
-				elseif positions[0].GetRelationshipRank(positions[1]) == 4
-					while tagid < Animations.length
-						if Animations[tagid].HasTag("Loving")
-							_animations[idx] = Animations[tagid]
-							idx +=1
-						endIf
-						tagid += 1
-					endWhile  
-								
-					log("it is loving " + idx)				
+					log("it is rape " + _aniTagIds)		
 				else
-					while tagid < Animations.length
-						if Animations[tagid].HasTag("Prostitute") && !Animations[tagid].HasTag("Rape")
-							_animations[idx] = Animations[tagid]
-							idx +=1
-						endIf
-						tagid += 1
-					endWhile
+					if positions[0].GetRelationshipRank(positions[1]) == 1 || positions[0].GetRelationshipRank(positions[1]) == 4
+						while tagid < Animations.length
+							if Animations[tagid].HasTag("Loving")
+								_aniTagIds[idx] = tagid
+								idx +=1
+							endIf
+							tagid += 1
+						endWhile  
+									
+						log("it is loving " + _aniTagIds)
+					else
+						while tagid < Animations.length
+							if Animations[tagid].HasTag("Prostitute")
+								_aniTagIds[idx] = tagid
+								idx +=1
+							endIf
+							tagid += 1
+						endWhile
 								
-					log("it is default " + idx)					
+						log("it is default " + _aniTagIds)							
+					endif
 				endif
 
-				if _animations.length > 0
-					log("eligible animation not found")
-					SetAnimation(Animations.Find(_animations[Utility.RandomInt(0, idx - 1)]))
+				if idx > 0
+					SetAnimation(_aniTagIds[Utility.RandomInt(0, idx - 1)])		
 				else 
+					log("eligible animation not found")
 					SetAnimation()	
 				endif
 			else 
@@ -843,14 +846,16 @@ endState
 ; ------------------------------------------------------- ;
 ; --- Context Sensitive Info                          --- ;
 ; ------------------------------------------------------- ;
-
 function SetAnimation(int aid = -1)
+
+	log("choose aid " + aid)
+
 	; Randomize if -1
 	if aid < 0 || aid >= Animations.Length
 		aid = Utility.RandomInt(0, (Animations.Length - 1))
 	endIf
 	; Set active animation
-	Animation = Animations[aid]
+	Animation = Animations[aid]	
 
 	log("SetAnimation aid: " + aid + ", stages: " + Animation.StageCount + ", Actors; " + Animation.PositionCount)
 	; Sort actors positions if needed
@@ -922,11 +927,11 @@ ObjectReference function GetCenterFX()
 		endWhile
 	endIf
 endFunction
-															 ; �Ÿ��� ���� ������ ȹ�� (������ ���� �ʿ�)
+				
 float function getvolume (actor ActorRef) 
 
 	if hasPlayer
-		return 0.5
+		return 0.4
 	else 
 		ObjectReference _actorRef = ActorRef as ObjectReference
 		ObjectReference _playerRef = PlayerRef as ObjectReference
@@ -995,43 +1000,51 @@ function EndLeadIn()
 
 		; leadin 이 종료된 후, 바로 이어지는 animation 의 경우
 		if Positions.length > 1
-			sslBaseAnimation[] _animations = sslUtility.AnimationArray(128)
+			int[] _aniTagIds = new int[128]
 			int tagid = 0
 			int idx = 0
 			if Victims.length > 0
 				while tagid < Animations.length
 					if Animations[tagid].HasTag("Aggressive") || Animations[tagid].HasTag("Rape")
-						_animations[idx] = Animations[tagid]
+						_aniTagIds[idx] = tagid
 						idx +=1
 					endIf
 					tagid += 1
-				endWhile
-			elseif positions[0].GetRelationshipRank(positions[1]) == 4
-				while tagid < Animations.length
-					if Animations[tagid].HasTag("Loving")
-						_animations[idx] = Animations[tagid]
-						idx +=1
-					endIf
-					tagid += 1
-				endWhile
+				endWhile			
 			else
-				while tagid < Animations.length
-					if Animations[tagid].HasTag("Prostitute") && !Animations[tagid].HasTag("Rape")
-						_animations[idx] = Animations[tagid]
-						idx +=1
-					endIf
-					tagid += 1
-				endWhile
+				if positions[0].GetRelationshipRank(positions[1]) == 1 || positions[0].GetRelationshipRank(positions[1]) == 4
+					while tagid < Animations.length
+						if Animations[tagid].HasTag("Loving")
+							_aniTagIds[idx] = tagid
+							idx +=1
+						endIf
+						tagid += 1
+					endWhile
+				else 
+					while tagid < Animations.length
+						if Animations[tagid].HasTag("Prostitute")
+							_aniTagIds[idx] = tagid
+							idx +=1
+						endIf
+						tagid += 1
+					endWhile
+				endif
 			endif
-			if _animations.length > 0
+			if idx > 0
+				SetAnimation(_aniTagIds[Utility.RandomInt(0, idx - 1)])
+			else 				
 				log("eligible animation not found")
-				SetAnimation(Animations.Find(_animations[Utility.RandomInt(0, idx - 1)]))
-			else 
-				SetAnimation()	
+				SetAnimation()							
 			endif 			
 		else 
 			SetAnimation()
 		endif
+
+		int actorIdx = 0
+		while actorIdx < actorCount
+			ActorAlias[actorIdx].playDefaultAnimation()
+			actorIdx += 1
+		endWhile
 
 		; Add runtime to foreplay skill xp
 		SkillXP[0] = SkillXP[0] + (TotalTime / 10.0)

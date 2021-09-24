@@ -70,23 +70,23 @@ int function FlagIndex(int Stage, int Slot)
 	return ((PapyrusUtil.ClampInt(Stage, 1, Stages) - 1) * kFlagEnd) + Slot
 endfunction
 
-int function orgasmTypeIndex(int Stage, int Slot)
+int function sfxOrgasmIndex(int Stage, int Slot)
 	return ((PapyrusUtil.ClampInt(Stage, 1, Stages) - 1) * 1) + Slot
 endfunction
 
-int function SfxVoiceTypeIndex(int Stage, int Slot)
+int function sfxMoanTypeIndex(int Stage, int Slot)
 	return ((PapyrusUtil.ClampInt(Stage, 1, Stages) - 1) * 1) + Slot
 endfunction
 
-int function SfxSoundIndex(int Stage, int Slot)
+int function sfxVoiceTypeIndex(int Stage, int Slot)
 	return ((PapyrusUtil.ClampInt(Stage, 1, Stages) - 1) * 1) + Slot
 endfunction
 
-int function SfxExpressionIndex(int Stage, int Slot)
+int function sfxSoundIndex(int Stage, int Slot)
 	return ((PapyrusUtil.ClampInt(Stage, 1, Stages) - 1) * 1) + Slot
 endfunction
 
-int function SfxMouthIndex(int Stage, int Slot)
+int function sfxExpressionIndex(int Stage, int Slot)
 	return ((PapyrusUtil.ClampInt(Stage, 1, Stages) - 1) * 1) + Slot
 endfunction
 
@@ -565,13 +565,24 @@ String function PositionAction(String Output, int Position, int Stage)
 endFunction
 
 ; ------------------------------------------------------- ;
+; --- Orgasm Scene                                       --- ;
+; ------------------------------------------------------- ;
+
+bool function PositionSfxOrgasmEffect(bool Output, int Position, int Stage)
+	int i = sfxOrgasmIndex(Stage, 0)
+	int[] _orgasmType = sfxOrgasmArray(Position)	
+	Output = _orgasmType[i] as bool
+	return Output  as bool
+endFunction
+
+; ------------------------------------------------------- ;
 ; --- End Scene                                       --- ;
 ; ------------------------------------------------------- ;
 
-String function PositionOrgasmType(String Output, int Position, int Stage)
-	int i = orgasmTypeIndex(Stage, 0)
-	String[] _orgasmType = sfxOrgasmTypeArray(Position)	
-	Output = _orgasmType[i]
+String function PositionSfxMoanType(String Output, int Position, int Stage)
+	int i = sfxMoanTypeIndex(Stage, 0)
+	String[] _moanType = sfxMoanTypeArray(Position)	
+	Output = _moanType[i]
 	return Output
 endFunction
 
@@ -580,7 +591,7 @@ endFunction
 ; ------------------------------------------------------- ;
 
 String function PositionSfxVoice(String Output, int Position, int Stage)
-	int i = SfxVoiceTypeIndex(Stage, 0)
+	int i = sfxVoiceTypeIndex(Stage, 0)
 	String[] _sfxVoiceType = sfxVoiceTypeArray(Position)	
 	Output = _sfxVoiceType[i]
 	return Output
@@ -591,7 +602,7 @@ endFunction
 ; ------------------------------------------------------- ;
 
 String function PositionSfxSound(String Output, int Position, int Stage)
-	int i = SfxSoundIndex(Stage, 0)
+	int i = sfxSoundIndex(Stage, 0)
 	String[] _sfxSounds = sfxSoundArray(Position)	
 	Output = _sfxSounds[i]
 	return Output
@@ -601,21 +612,10 @@ endFunction
 ; --- Sfx expression                                           --- ;
 ; ------------------------------------------------------- ;
 
-String function PositionSfxExpression(String Output, int Position, int Stage)
-	int i = SfxExpressionIndex(Stage, 0)
+String function PositionSfxExpressionType(String Output, int Position, int Stage)
+	int i = sfxExpressionIndex(Stage, 0)
 	String[] _sfxExpressionType = sfxExpressionTypeArray(Position)	
 	Output = _sfxExpressionType[i]
-	return Output
-endFunction
-
-; ------------------------------------------------------- ;
-; --- Sfx expression                                           --- ;
-; ------------------------------------------------------- ;
-
-String function PositionSfxExpressionLevel(String Output, int Position, int Stage)
-	int i = SfxMouthIndex(Stage, 0)
-	String[] _sfxExpressionLevels = sfxExpressionsArray(Position)	
-	Output = _sfxExpressionLevels[i]
 	return Output
 endFunction
 
@@ -831,8 +831,8 @@ int uid
 int vid
 int sid
 int eid
-int exid
 int mid
+int exid
 string[] GenderTags
 
 bool Locked
@@ -852,8 +852,8 @@ int function AddPosition(int Gender = 0, int AddCum = -1)
 	vid = 0
 	sid = 0
 	eid = 0
-	exid = 0
 	mid = 0
+	exid = 0
 
 	Genders[Gender]   = Genders[Gender] + 1
 	Positions[Actors] = Gender
@@ -891,7 +891,7 @@ int function AddCreaturePosition(string RaceKey, int Gender = 2, int AddCum = -1
 	return pid
 endFunction
 
-function AddPositionStage(int Position, string AnimationEvent, float forward = 0.0, float side = 0.0, float up = 0.0, float rotate = 0.0, bool silent = false, bool openmouth = false, bool strapon = true, int sos = 0, String sfxAction = "", String sfxVoiceType = "", String sfxSounds = "", String sfxExpressionType = "", String sfxExpressionLevels = "", String sfxOrgasmType = "")
+function AddPositionStage(int Position, string AnimationEvent, float forward = 0.0, float side = 0.0, float up = 0.0, float rotate = 0.0, bool silent = false, bool openmouth = false, bool strapon = true, int sos = 0, String sfxAction = "", String sfxVoiceType = "", String sfxSounds = "", String sfxExpressionType = "", bool sfxOrgasm = false, String sfxMoanType = "")
 	; Out of range position or empty animation event
 	if Position == -1 || Position >= 5 || AnimationEvent == ""
 		Log("FATAL: Invalid arguments!", "AddPositionStage("+Position+", "+AnimationEvent+")")
@@ -929,12 +929,6 @@ function AddPositionStage(int Position, string AnimationEvent, float forward = 0
 			Log("WARNING: Offsets position overflow, resizing! - Current offsets: "+sfxExpressionType0, "AddPositionStage("+Position+", "+AnimationEvent+")")
 			sfxExpressionType0 = PapyrusUtil.ResizeStringArray(sfxExpressionType0, (sfxExpressionType0.Length + 32))
 		endIf			
-		
-		; Offset stage overflow
-		if (mid + kSfxExpressionLevelsEnd) >= sfxExpressionLevels0.Length
-			Log("WARNING: Offsets position overflow, resizing! - Current offsets: "+sfxExpressionLevels0, "AddPositionStage("+Position+", "+AnimationEvent+")")
-			sfxExpressionLevels0 = PapyrusUtil.ResizeStringArray(sfxExpressionLevels0, (sfxExpressionLevels0.Length + 32))
-		endIf			
 
 		; Offset stage overflow
 		if (uid + kActionEnd) >= action0.Length
@@ -943,10 +937,17 @@ function AddPositionStage(int Position, string AnimationEvent, float forward = 0
 		endIf	
 
 		; Offset stage overflow
-		if (eid + kSfxOrgasmTypeEnd) >= orgasmType0.Length
-			Log("WARNING: Offsets position overflow, resizing! - Current offsets: "+orgasmType0, "AddPositionStage("+Position+", "+AnimationEvent+")")
-			orgasmType0 = PapyrusUtil.ResizeStringArray(orgasmType0, (orgasmType0.Length + 32))
+		if (eid + kSfxOrgasmEnd) >= sfxOrgasm0.Length
+			Log("WARNING: Offsets position overflow, resizing! - Current offsets: "+sfxOrgasm0, "AddPositionStage("+Position+", "+AnimationEvent+")")
+			sfxOrgasm0 = PapyrusUtil.ResizeIntArray(sfxOrgasm0, (sfxOrgasm0.Length + 32))
 		endIf		
+
+		; Offset stage overflow
+		if (mid + kSfxMoanTypeEnd) >= sfxMoanType0.Length
+			Log("WARNING: Offsets position overflow, resizing! - Current offsets: "+sfxMoanType0, "AddPositionStage("+Position+", "+AnimationEvent+")")
+			sfxMoanType0 = PapyrusUtil.ResizeStringArray(sfxMoanType0, (sfxMoanType0.Length + 32))
+		endIf		
+
 	endIf
 
 	; Save stage animation event
@@ -987,10 +988,16 @@ function AddPositionStage(int Position, string AnimationEvent, float forward = 0
 	_action[uid + 0] = sfxAction
 	uid += kActionEnd
 
-	; Save orgasm voice
-	String[] _sfxOrgasmType = sfxOrgasmTypeArray(Position)
-	_sfxOrgasmType[eid + 0] = sfxOrgasmType
-	eid += kSfxOrgasmTypeEnd
+	; Save orgasm effect
+	int[] _sfxOrgasm = sfxOrgasmArray(Position)
+	_sfxOrgasm[eid + 0] = sfxOrgasm as int
+	eid += kSfxOrgasmEnd
+
+	; Save orgasm effect
+	String[] _sfxMoanType = sfxMoanTypeArray(Position)
+	_sfxMoanType[mid + 0] = _sfxMoanType
+	mid += kSfxMoanTypeEnd
+
 
 	; Save sfx voice
 	String[] _voiceType = sfxVoiceTypeArray(Position)
@@ -1006,11 +1013,6 @@ function AddPositionStage(int Position, string AnimationEvent, float forward = 0
 	String[] _sfxExpressionType = sfxExpressionTypeArray(Position)
 	_sfxExpressionType[exid + 0] = sfxExpressionType
 	exid += kSfxExpressionTypeEnd
-
-	; Save sfx mouths
-	String[] _sfxExpressionLevels = sfxExpressionsArray(Position)
-	_sfxExpressionLevels[mid + 0] = sfxExpressionLevels
-	mid += kSfxExpressionLevelsEnd
 
 endFunction
 
@@ -1337,29 +1339,56 @@ String[] function sfxActionArray(int Position)
 	return Utility.CreateStringArray(0)
 endFunction
 
-int property kSfxOrgasmTypeEnd hidden
+int property kSfxOrgasmEnd hidden
 	int function get()
 		return 1
 	endFunction
 endProperty
 
-String[] orgasmType0
-String[] orgasmType1
-String[] orgasmType2
-String[] orgasmType3
-String[] orgasmType4
+int[] sfxOrgasm0
+int[] sfxOrgasm1
+int[] sfxOrgasm2
+int[] sfxOrgasm3
+int[] sfxOrgasm4
 
-string[] function sfxOrgasmTypeArray(int Position)
+int[] function sfxOrgasmArray(int Position)
 	if Position == 0
-		return orgasmType0
+		return sfxOrgasm0
 	elseIf Position == 1
-		return orgasmType1
+		return sfxOrgasm1
 	elseIf Position == 2
-		return orgasmType2
+		return sfxOrgasm2
 	elseIf Position == 3
-		return orgasmType3
+		return sfxOrgasm3
 	elseIf Position == 4
-		return orgasmType4
+		return sfxOrgasm4
+	endIf
+	return Utility.CreateIntArray(0)
+endFunction
+
+int property kSfxMoanTypeEnd hidden
+	int function get()
+		return 1
+	endFunction
+endProperty
+
+String[] sfxMoanType0
+String[] sfxMoanType1
+String[] sfxMoanType2
+String[] sfxMoanType3
+String[] sfxMoanType4
+
+string[] function sfxMoanTypeArray(int Position)
+	if Position == 0
+		return sfxMoanType0
+	elseIf Position == 1
+		return sfxMoanType1
+	elseIf Position == 2
+		return sfxMoanType2
+	elseIf Position == 3
+		return sfxMoanType3
+	elseIf Position == 4
+		return sfxMoanType4
 	endIf
 	return Utility.CreateStringArray(0)
 endFunction
@@ -1441,33 +1470,6 @@ string[] function sfxExpressionTypeArray(int Position)
 		return sfxExpressionType3
 	elseIf Position == 4
 		return sfxExpressionType4
-	endIf
-	return Utility.CreateStringArray(0)
-endFunction
-
-int property kSfxExpressionLevelsEnd hidden
-	int function get()
-		return 1
-	endFunction
-endProperty
-
-String[] sfxExpressionLevels0
-String[] sfxExpressionLevels1
-String[] sfxExpressionLevels2
-String[] sfxExpressionLevels3
-String[] sfxExpressionLevels4
-
-string[] function sfxExpressionsArray(int Position)
-	if Position == 0
-		return sfxExpressionLevels0
-	elseIf Position == 1
-		return sfxExpressionLevels1
-	elseIf Position == 2
-		return sfxExpressionLevels2
-	elseIf Position == 3
-		return sfxExpressionLevels3
-	elseIf Position == 4
-		return sfxExpressionLevels4
 	endIf
 	return Utility.CreateStringArray(0)
 endFunction
@@ -1569,48 +1571,45 @@ function InitArrays(int Position)
 		Flags0     = new int[128]
 		Offsets0   = new float[128]
 		action0 = new string[128] 
-		orgasmType0 = new string[128]
+		sfxOrgasm0 = new int[128]
+		sfxMoanType0 = new string[128]
 		sfxVoice0 = new string[128]
 		sfxSounds0 = new string[128]
 		sfxExpressionType0 = new string[128]
-		sfxExpressionLevels0 = new string[128]
 		Animations = new string[128]
 	elseIf Position == 1
 		Flags1   = Utility.CreateIntArray((Stages * kFlagEnd))
 		Offsets1 = Utility.CreateFloatArray((Stages * kOffsetEnd))
 		action1 = Utility.CreateStringArray((Stages * kActionEnd))
-		orgasmType1 = Utility.CreateStringArray((Stages * kSfxOrgasmTypeEnd))
+		sfxOrgasm1 = Utility.CreateIntArray((Stages * kSfxOrgasmEnd))
+		sfxMoanType1 = Utility.CreateStringArray((Stages * kSfxMoanTypeEnd))	
 		sfxVoice1 = Utility.CreateStringArray((Stages * kSfxVoiceTypeEnd))
 		sfxSounds1 = Utility.CreateStringArray((Stages * kSfxSoundsEnd))
 		sfxExpressionType1 = Utility.CreateStringArray((Stages * kSfxExpressionTypeEnd))
-		sfxExpressionLevels1 = Utility.CreateStringArray((Stages * kSfxExpressionLevelsEnd))
 	elseIf Position == 2
 		Flags2   = Utility.CreateIntArray((Stages * kFlagEnd))
 		Offsets2 = Utility.CreateFloatArray((Stages * kOffsetEnd))
 		action2 = Utility.CreateStringArray((Stages * kActionEnd))
-		orgasmType2 = Utility.CreateStringArray((Stages * kSfxOrgasmTypeEnd))
+		sfxOrgasm2 = Utility.CreateIntArray((Stages * kSfxOrgasmEnd))
+		sfxMoanType2 = Utility.CreateStringArray((Stages * kSfxMoanTypeEnd))	
 		sfxVoice2 = Utility.CreateStringArray((Stages * kSfxVoiceTypeEnd))
 		sfxSounds2 = Utility.CreateStringArray((Stages * kSfxSoundsEnd))
-		sfxExpressionType2 = Utility.CreateStringArray((Stages * kSfxExpressionTypeEnd))
-		sfxExpressionLevels2 = Utility.CreateStringArray((Stages * kSfxExpressionLevelsEnd))
 	elseIf Position == 3
 		Flags3   = Utility.CreateIntArray((Stages * kFlagEnd))
 		Offsets3 = Utility.CreateFloatArray((Stages * kOffsetEnd))
 		action3 = Utility.CreateStringArray((Stages * kActionEnd))
-		orgasmType3 = Utility.CreateStringArray((Stages * kSfxOrgasmTypeEnd))
+		sfxOrgasm3 = Utility.CreateIntArray((Stages * kSfxOrgasmEnd))
+		sfxMoanType3 = Utility.CreateStringArray((Stages * kSfxMoanTypeEnd))	
 		sfxVoice3 = Utility.CreateStringArray((Stages * kSfxVoiceTypeEnd))
 		sfxSounds3 = Utility.CreateStringArray((Stages * kSfxSoundsEnd))
-		sfxExpressionType3 = Utility.CreateStringArray((Stages * kSfxExpressionTypeEnd))
-		sfxExpressionLevels3 = Utility.CreateStringArray((Stages * kSfxExpressionLevelsEnd))
 	elseIf Position == 4
 		Flags4   = Utility.CreateIntArray((Stages * kFlagEnd))
 		Offsets4 = Utility.CreateFloatArray((Stages * kOffsetEnd))
 		action4 = Utility.CreateStringArray((Stages * kActionEnd))
-		orgasmType4 = Utility.CreateStringArray((Stages * kSfxOrgasmTypeEnd))
+		sfxOrgasm4 = Utility.CreateIntArray((Stages * kSfxOrgasmEnd))
+		sfxMoanType4 = Utility.CreateStringArray((Stages * kSfxMoanTypeEnd))	
 		sfxVoice4 = Utility.CreateStringArray((Stages * kSfxVoiceTypeEnd))
 		sfxSounds4 = Utility.CreateStringArray((Stages * kSfxSoundsEnd))
-		sfxExpressionType4 = Utility.CreateStringArray((Stages * kSfxExpressionTypeEnd))
-		sfxExpressionLevels4 = Utility.CreateStringArray((Stages * kSfxExpressionLevelsEnd))
 	endIf
 endFunction
 
@@ -1725,3 +1724,169 @@ function ExportJSON()
 	JsonUtil.Save(Filename)
 	JsonUtil.Unload(Filename)
 endFunction
+
+function doSfxEyeExpression(Actor _actorRef, int position, string sfxExpression, int strength)
+	;				  		    7 - Mood Neutral
+	; 0 - Dialogue Anger		8 - Mood Anger		15 - Combat Anger
+	; 1 - Dialogue Fear			9 - Mood Fear		16 - Combat Shout
+	; 2 - Dialogue Happy		10 - Mood Happy
+	; 3 - Dialogue Sad			11 - Mood Sad
+	; 4 - Dialogue Surprise		12 - Mood Surprise
+	; 5 - Dialogue Puzzled		13 - Mood Puzzled
+	; 6 - Dialogue Disgusted	14 - Mood Disgusted
+	; aiStrength is from 0 to 100 (percent)
+
+	; 표정
+	int expressionIdx = 7
+	if sfxExpression == "Anger"
+		expressionIdx = 8
+	elseif sfxExpression == "Fear"
+		expressionIdx = 9
+	elseif sfxExpression == "Happy"
+		expressionIdx = 10	
+	elseif sfxExpression == "Sad"
+		expressionIdx = 11
+	elseif sfxExpression == "Surprise"
+		expressionIdx = 12
+	elseif sfxExpression == "Puzzled"
+		expressionIdx = 13
+	elseif sfxExpression == "Disgusted"
+		expressionIdx = 14
+	elseif sfxExpression == "Shout"
+		expressionIdx = 16
+	endif
+
+	; 눈썹
+	_actorRef.SetExpressionOverride(expressionIdx, Utility.RandomInt(80, 100))
+		
+	int mok = strength / 50
+	int remain = strength % 50
+	float _strength = 0.0
+	if mok % 2 == 0
+		strength = remain
+	else 
+		strength = 50 - remain
+	endif 
+
+	if 	expressionIdx == 9 ; "Fear"	
+
+		strength += 50  	; from 50 to 100
+		_strength = strength / 100.0
+
+		; 왼쪽 눈
+		_actorRef.SetExpressionModifier(12, 0.3)			;squint
+		_actorRef.SetExpressionModifier(0, _strength)		;blink
+		; 오른쪽 눈
+		_actorRef.SetExpressionModifier(13, 0.3)			;squint
+		_actorRef.SetExpressionModifier(1,  0.3)			;blink	
+	elseif expressionIdx == 10 ; "Happy"
+
+		strength += 30  	; from 30 to 80
+		_strength = strength / 100.0
+
+		; 왼쪽 눈
+		_actorRef.SetExpressionModifier(12, _strength)		;squint
+		_actorRef.SetExpressionModifier(0, _strength)		;blink
+		; 오른쪽 눈
+		_actorRef.SetExpressionModifier(13, _strength)		;squint
+		_actorRef.SetExpressionModifier(1, _strength)		;blink
+	elseif 	expressionIdx == 11 ; "Sad"
+
+		strength += 10  	; from 10 to 60
+		_strength = strength / 100.0
+
+		; 왼쪽 눈
+		_actorRef.SetExpressionModifier(12, 0.3)			;squint
+		_actorRef.SetExpressionModifier(0, _strength)		;blink
+		; 오른쪽 눈
+		_actorRef.SetExpressionModifier(13, 0.3)			;squint
+		_actorRef.SetExpressionModifier(1, _strength)		;blink	
+	elseif expressionIdx == 12 ; "Surprise"	
+
+		strength += 0  	; from 0 to 50
+		_strength = strength / 100.0
+
+		; 왼쪽 눈
+		_actorRef.SetExpressionModifier(12, 0.3)			;squint
+		_actorRef.SetExpressionModifier(0, 0.5)				;blink
+		; 오른쪽 눈
+		_actorRef.SetExpressionModifier(13, 0.3)			;squint
+		_actorRef.SetExpressionModifier(1, _strength)		;blink		
+	endif
+
+	; if position == 0
+	; 	log("expression " + sfxExpression + ", strength " + _strength)
+	; endif
+endFunction 
+
+
+
+function doSfxMouthExpression(Actor _actorRef, int position, string sfxExpression, int strength, int baseStart, bool OpenMouth)
+	;				  		    7 - Mood Neutral
+	; 0 - Dialogue Anger		8 - Mood Anger		15 - Combat Anger
+	; 1 - Dialogue Fear			9 - Mood Fear		16 - Combat Shout
+	; 2 - Dialogue Happy		10 - Mood Happy
+	; 3 - Dialogue Sad			11 - Mood Sad
+	; 4 - Dialogue Surprise		12 - Mood Surprise
+	; 5 - Dialogue Puzzled		13 - Mood Puzzled
+	; 6 - Dialogue Disgusted	14 - Mood Disgusted
+	; aiStrength is from 0 to 100 (percent)
+
+	; 표정
+	int expressionIdx = 7
+	if sfxExpression == "Anger"
+		expressionIdx = 8
+	elseif sfxExpression == "Fear"
+		expressionIdx = 9
+	elseif sfxExpression == "Happy"
+		expressionIdx = 10	
+	elseif sfxExpression == "Sad"
+		expressionIdx = 11
+	elseif sfxExpression == "Surprise"
+		expressionIdx = 12
+	elseif sfxExpression == "Puzzled"
+		expressionIdx = 13
+	elseif sfxExpression == "Disgusted"
+		expressionIdx = 14
+	elseif sfxExpression == "Shout"
+		expressionIdx = 16
+	endif
+
+	strength = strength * 2
+	int mok = strength / 80
+	int remain = strength % 80
+	float _strength = 0.0
+	if mok % 2 == 0
+		strength = remain
+	else 
+		strength = 80 - remain
+	endif
+
+	; 입 표정
+	if OpenMouth
+		float mouthStrength = Utility.RandomFloat(0.8, 1.0)
+		_actorRef.SetExpressionPhoneme(1, mouthStrength)
+		_actorRef.SetExpressionPhoneme(14, mouthStrength)
+	else 
+		strength += baseStart
+		_strength = strength / 100.0
+
+		if expressionIdx == 9 ; "Fear"
+			_actorRef.SetExpressionPhoneme(1, _strength)
+			_actorRef.SetExpressionPhoneme(4, _strength)
+		elseif expressionIdx == 10 ; "Happy"
+			_actorRef.SetExpressionPhoneme(13, _strength)
+			; _actorRef.SetExpressionPhoneme(14, _strength)
+		elseif expressionIdx == 11 ; "Sad"
+			_actorRef.SetExpressionPhoneme(1, _strength)
+			; _actorRef.SetExpressionPhoneme(14, _strength)
+		elseif expressionIdx == 12 ; "Surprise"
+			_actorRef.SetExpressionPhoneme(13, _strength)
+			_actorRef.SetExpressionPhoneme(14, _strength)
+		endif
+	endif
+
+	if position == 0
+		log("expressionMouth " + sfxExpression + ", strength " + _strength + ", expressionIdx " + expressionIdx + ", baseStart " + baseStart)
+	endif
+endFunction 

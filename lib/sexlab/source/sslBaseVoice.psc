@@ -3,7 +3,6 @@ scriptname sslBaseVoice extends sslBaseObject
 Sound property Mild auto
 Sound property Medium auto
 Sound property Hot auto
-Sound property Orgasm auto
 
 Sound property Enjoy1 auto
 Sound property Enjoy2 auto
@@ -21,7 +20,11 @@ Sound property Pain1 auto
 Sound property Pain2 auto
 Sound property Pain3 auto
 
-Sound property Feel auto
+Sound property Feel1 auto
+Sound property Feel2 auto
+Sound property Feel3 auto
+
+Sound property Orgasm auto
 Sound property Moan auto
 
 Sound property Aggressive auto
@@ -32,9 +35,6 @@ Sound property SuckSlow auto
 Sound property SuckFast auto
 Sound property Deep auto
 
-; Sound[] property HotPack
-; Sound[] property MildPack
-; Sound[] property VictimPack
 
 Topic property LipSync auto hidden
 
@@ -208,6 +208,17 @@ Sound function GetPain3Sound()
 	return Pain3
 endFunction
 
+Sound function GetFeel1Sound()
+	return Feel1
+endFunction
+
+Sound function GetFeel2Sound()
+	return Feel2
+endFunction
+
+Sound function GetFeel3Sound()
+	return Feel3
+endFunction
 
 Sound function GetAggressiveSound()
 	return Aggressive
@@ -215,10 +226,6 @@ endFunction
 
 Sound function GetMoanSound()
 	return Moan
-endFunction
-
-Sound function GetFeelSound()
-	return Feel
 endFunction
 
 Sound function GetOrgasmSound()
@@ -390,7 +397,11 @@ function Initialize()
 	Pain2 = none
 	Pain3 = none
 
-	Feel  = none
+	Feel1  = none
+	Feel2  = none
+	Feel3  = none
+
+	Orgasm = none
 	Moan  = none
 
 	Aggressive = none

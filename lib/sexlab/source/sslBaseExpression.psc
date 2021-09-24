@@ -179,7 +179,7 @@ function OpenMouthWithSize(Actor ActorRef, int size) global
 	if (GetExpression(ActorRef, true) as int == OpenMouthExpression || GetExpression(ActorRef, false) != OpenMouthSize as float / 100.0)
 		ActorRef.SetExpressionOverride(OpenMouthExpression, OpenMouthSize)
 	endIf
-	; Utility.WaitMenuMode(0.1)
+	Utility.WaitMenuMode(0.1)
 endFunction
 
 function CloseMouth(Actor ActorRef) global
