@@ -20,15 +20,18 @@ int StageCount
 
 ; Adjustment hotkeys
 sslActorAlias AdjustAlias
+sslActorStats Stats
 int AdjustPos
 bool Adjusted
 bool hkReady
 Sound 	property SfxPussySound auto hidden
 Sound 	property SfxFuckSound auto hidden
 Sound	property SfxBedSound auto hidden
-Sound   property sfxSquishing auto hidden 
+Sound   property sfxSquishing auto hidden
 
-bool    property hasFurnitureRole auto hidden
+Spell   property sfxDibellaSpell auto hidden
+Spell   property sfxPoison1Spell auto hidden
+Spell   property sfxPoison2Spell auto hidden
 
 ; ------------------------------------------------------- ;
 ; --- Init                                 --- ;
@@ -39,23 +42,29 @@ event OnInit()
 endEvent
 
 function init()	
-	sfxSquishing           = Game.GetFormFromFile(0x65A31, "SexLab.esm") as Sound  ; 0x65A34  0x65A31
+	Form SexLabQuestFramework = Game.GetFormFromFile(0xD62, "SexLab.esm")
+	if SexLabQuestFramework		
+		Stats    = SexLabQuestFramework as sslActorStats
+	endIf
+
 	SfxPussySound      	   = Game.GetFormFromFile(0x020012CD, "Sexlab_beta9 plus.esp") as Sound
 	SfxFuckSound      	   = Game.GetFormFromFile(0x020012CB, "Sexlab_beta9 plus.esp") as Sound
 	SfxBedSound            = Game.GetFormFromFile(0x020012C9, "Sexlab_beta9 plus.esp") as Sound
+	sfxSquishing           = Game.GetFormFromFile(0x020058FF, "Sexlab_beta9 plus.esp") as Sound
+
+	sfxDibellaSpell		   = Game.GetFormFromFile(0x0010A766, "Skyrim.esm") as Spell
+	sfxPoison1Spell		   = Game.GetFormFromFile(0x000638B2, "Skyrim.esm") as Spell
+	sfxPoison2Spell		   = Game.GetFormFromFile(0x00053475, "Skyrim.esm") as Spell
 endfunction
 
 ; ------------------------------------------------------- ;
 ; --- Thread Starter                                  --- ;
 ; ------------------------------------------------------- ;
 
-bool Prepared
 state Prepare
 	function FireAction()
 
 		log("Prepare " + LeadIn)
-
-		Prepared = false
 
 		HookAnimationPrepare()
 
@@ -73,65 +82,56 @@ state Prepare
 			log("it has StartingAnimation " + StartingAnimation)
 			SetAnimation(Animations.Find(StartingAnimation))
 		else
-			; leadin인 경우와 아닌 경우에 대해, animation 처리
-			if LeadIn && positions.length > 1				
-				int[] _aniTagIds = new int[128]
-				int tagid = 0
-				int idx = 0
+			int[] _aniTagIds = new int[100]
+			int tagid = 0
+			int idx = 0
 
-				log("relation Rank " + positions[0].GetRelationshipRank(positions[1]))
-				if Victims.length > 0
-					while tagid < Animations.length
-						if Animations[tagid].HasTag("Rape")
+			if Victims.length > 0
+				while tagid < Animations.length && idx < 100
+					if Animations[tagid].HasTag("Rape")
+						_aniTagIds[idx] = tagid
+						idx +=1
+					endIf
+					tagid += 1
+				endWhile
+			else
+				; spouse or friend
+				if positions[0].GetRelationshipRank(positions[1]) == 1 || positions[0].GetRelationshipRank(positions[1]) == 4
+					while tagid < Animations.length && idx < 100
+						if Animations[tagid].HasTag("Loving")
 							_aniTagIds[idx] = tagid
 							idx +=1
 						endIf
 						tagid += 1
 					endWhile
-				
-					log("it is rape " + _aniTagIds)		
 				else
-					if positions[0].GetRelationshipRank(positions[1]) == 1 || positions[0].GetRelationshipRank(positions[1]) == 4
-						while tagid < Animations.length
-							if Animations[tagid].HasTag("Loving")
-								_aniTagIds[idx] = tagid
-								idx +=1
-							endIf
-							tagid += 1
-						endWhile  
-									
-						log("it is loving " + _aniTagIds)
-					else
-						while tagid < Animations.length
-							if Animations[tagid].HasTag("Prostitute")
-								_aniTagIds[idx] = tagid
-								idx +=1
-							endIf
-							tagid += 1
-						endWhile
-								
-						log("it is default " + _aniTagIds)							
-					endif
+					while tagid < Animations.length && idx < 100
+						if Animations[tagid].HasTag("Prostitute")
+							_aniTagIds[idx] = tagid
+							idx +=1
+						endIf
+						tagid += 1
+					endWhile
 				endif
-
-				if idx > 0
-					SetAnimation(_aniTagIds[Utility.RandomInt(0, idx - 1)])		
-				else 
-					log("eligible animation not found")
-					SetAnimation()	
-				endif
-			else 
-				SetAnimation()
 			endif
+
+			if idx > 0
+				SetAnimation(_aniTagIds[Utility.RandomInt(0, idx - 1)])
+			else 
+				log("eligible animation not found")
+				SetAnimation()	
+			endif
+
 			StartingAnimation = none
 		endIf
 		; Begin actor prep
 		ModEvent.Send(ModEvent.Create(Key("Prepare")))
 
-		bool ready = false
-		while ready == false
-			int actorIdx = 0
-			int readyCount = 0
+		int actorIdx = 0
+		int readyCount = 0
+		while readyCount < ActorCount
+			readyCount = 0
+			actorIdx = 0
 			while actorIdx < actorCount
 				if ActorAlias[actorIdx].kPrepareActor
 					readyCount += 1
@@ -139,79 +139,74 @@ state Prepare
 				actorIdx += 1
 			endWhile
 			Utility.wait(0.1)
-
-			if readyCount == ActorCount
-				ready = true
-			endif
 		endWhile		
-		RegisterForSingleUpdate(0.1)
-	endFunction
 
-	function PrepareDone()
-		RegisterForSingleUpdate(0.1)
-	endFunction
+		actorIdx = 0
+		while actorIdx < actorCount
+			ActorAlias[actorIdx].kPrepareActor = false
+			actorIdx += 1
+		endWhile		
 
-	function StartupDone()
 		RegisterForSingleUpdate(0.1)
 	endFunction
 
 	event OnUpdate()
-		if !Prepared
-			; Reset loc, incase actor type center has moved during prep
-			;/ if CenterRef && CenterRef.Is3DLoaded() && SexLabUtil.IsActor(CenterRef) && Positions.Find(CenterRef as Actor) != -1
-				CenterLocation[0] = CenterRef.GetPositionX()
-				CenterLocation[1] = CenterRef.GetPositionY()
-				; CenterLocation[2] = CenterRef.GetPositionZ()
-				CenterLocation[3] = CenterRef.GetAngleX()
-				CenterLocation[4] = CenterRef.GetAngleY()
-				CenterLocation[5] = CenterRef.GetAngleZ()
-			endIf /;
-			; Set starting adjusted actor
-			AdjustPos   = FindSlot(Config.TargetRef)
-			if AdjustPos == -1
-				AdjustPos   = (ActorCount > 1) as int
-				if FindSlot(PlayerRef) >= 0 && Positions[AdjustPos] != PlayerRef
-					Config.TargetRef = Positions[AdjustPos]
-				endIf
+		; Reset loc, incase actor type center has moved during prep
+		;/ if CenterRef && CenterRef.Is3DLoaded() && SexLabUtil.IsActor(CenterRef) && Positions.Find(CenterRef as Actor) != -1
+			CenterLocation[0] = CenterRef.GetPositionX()
+			CenterLocation[1] = CenterRef.GetPositionY()
+			; CenterLocation[2] = CenterRef.GetPositionZ()
+			CenterLocation[3] = CenterRef.GetAngleX()
+			CenterLocation[4] = CenterRef.GetAngleY()
+			CenterLocation[5] = CenterRef.GetAngleZ()
+		endIf /;
+		; Set starting adjusted actor
+		AdjustPos   = FindSlot(Config.TargetRef)
+		if AdjustPos == -1
+			AdjustPos   = (ActorCount > 1) as int
+			if FindSlot(PlayerRef) >= 0 && Positions[AdjustPos] != PlayerRef
+				Config.TargetRef = Positions[AdjustPos]
 			endIf
-			AdjustAlias = PositionAlias(AdjustPos)
-			; Get localized config options
-			BaseDelay = Config.SFXDelay
-			; Send starter events
-			SendThreadEvent("AnimationStart")
-			if LeadIn
-				SendThreadEvent("LeadInStart")
-			endIf
-			; Start time trackers
-			RealTime[0] = Utility.GetCurrentRealTime()
-			SkillTime = RealTime[0]
-			StartedAt = RealTime[0]
-
-			ModEvent.Send(ModEvent.Create(Key("Startup")))
-
-			bool ready = false		
-			while ready == false
-				int readyCount = 0
-				int actorIdx = 0
-				while actorIdx < actorCount
-					if ActorAlias[actorIdx].kStartup
-						readyCount += 1
-					endif
-					actorIdx += 1
-				endWhile
-				Utility.wait(0.1)
-	
-				if readyCount == ActorCount
-					ready = true
-				endif
-			endWhile
-
-			Prepared = true
-			RegisterForSingleUpdate(0.1)
-		else
-			; Start animating
-			Action("Advancing")
 		endIf
+		AdjustAlias = PositionAlias(AdjustPos)
+		; Get localized config options
+		BaseDelay = Config.SFXDelay
+		; Send starter events
+		SendThreadEvent("AnimationStart")
+		if LeadIn
+			SendThreadEvent("LeadInStart")
+		endIf
+		; Start time trackers
+		RealTime[0] = Utility.GetCurrentRealTime()
+		SkillTime = RealTime[0]
+		StartedAt = RealTime[0]
+
+		ModEvent.Send(ModEvent.Create(Key("Startup")))
+
+		; check
+		int actorIdx = 0	
+		int readyCount = 0
+		while readyCount < ActorCount		
+			readyCount = 0
+			actorIdx = 0
+			while actorIdx < actorCount
+				if ActorAlias[actorIdx].kStartup
+					readyCount += 1
+				endif
+				actorIdx += 1
+			endWhile
+			Utility.wait(0.1)
+		endWhile
+
+		; reset
+		actorIdx = 0
+		while actorIdx < actorCount
+			ActorAlias[actorIdx].kStartup = false
+			actorIdx += 1
+		endWhile
+
+		; Start animating
+		Action("Advancing")
 	endEvent
 
 	function PlayStageAnimations()
@@ -231,50 +226,43 @@ endState
 state Advancing
 	function FireAction()
 		Log("Stage: "+ Stage + ", StageCount: " + StageCount, "Advancing")
-		if Stage <= 1
-			Stage = 1
 
-			string[] aniTags = Animation.GetRawTags()					
-			hasFurnitureRole = false
-			if isBedAction == true
-				hasFurnitureRole = true
-			endif			
-		elseIf Stage > StageCount
+		if  Stage > StageCount
 			if LeadIn
 				EndLeadIn()
 			else
 				EndAnimation()
 			endIf
-			return
-		endIf
-		
-		ModEvent.Send(ModEvent.Create(Key("Sync")))
-				
-		bool ready = false		
-		while ready == false
-			int readyCount = 0
+		else 
+			if Stage <= 1
+				Stage = 1	
+			endif 
+
+			ModEvent.Send(ModEvent.Create(Key("Sync")))				
+			; sync 값 확인
 			int actorIdx = 0
+			int readyCount = 0		
+			while readyCount < ActorCount
+				readyCount = 0
+				actorIdx = 0
+				while actorIdx < actorCount
+					if ActorAlias[actorIdx].kSyncActor
+						readyCount += 1
+					endif
+					actorIdx += 1
+				endWhile
+				Utility.wait(0.1)
+			endWhile
+				
+			; sync 값 초기화
+			actorIdx = 0	
 			while actorIdx < actorCount
-				if ActorAlias[actorIdx].kSyncActor
-					readyCount += 1
-				endif
+				ActorAlias[actorIdx].kSyncActor = false
 				actorIdx += 1
 			endWhile
-			Utility.wait(0.1)
-
-			if readyCount == ActorCount
-				ready = true
-			endif
-		endWhile
-		
-		; reset
-		int actorIdx = 0	
-		while actorIdx < actorCount
-			ActorAlias[actorIdx].kSyncActor = false
-			actorIdx += 1
-		endWhile
-		
-		RegisterForSingleUpdate(0.1)
+				
+			RegisterForSingleUpdate(0.1)					
+		endif 
 	endFunction
 
 	function SyncDone()
@@ -296,6 +284,59 @@ endState
 
 state Animating
 
+	; @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+	; @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+	; @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+	; @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+	; @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+	; @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+	event OnUpdate()
+		; Debug.Trace("(thread update)")
+		; Update timer share
+		RealTime[0] = Utility.GetCurrentRealTime()		
+		; 메뉴 모드 접근 시 onUpdate 초기화
+		if Utility.IsInMenuMode()
+			int actorIdx=0
+			while actorIdx < ActorCount
+				ActorAlias[actorIdx].onMenuModeEnter()
+				actorIdx+=1
+			endWhile
+
+			while Utility.IsInMenuMode()
+				Utility.WaitMenuMode(1.5)
+				StageTimer += 1.2
+			endWhile
+
+			actorIdx=0
+			while actorIdx < ActorCount
+				ActorAlias[actorIdx].onMenuModeExit()
+				actorIdx+=1
+			endWhile
+		endIf
+
+		; Advance stage on timer
+		if (AutoAdvance || TimedStage) && StageTimer < RealTime[0]
+			GoToStage((Stage + 1))
+			return
+		endIf
+		; Play SFX
+		if SoundFX && SFXTimer < RealTime[0]
+			SoundFX.Play(GetCenterFX())
+			SFXTimer = RealTime[0] + SFXDelay
+		endIf
+
+		; Play SfxExpression
+		int actorIdx=0
+		while actorIdx < ActorCount
+			ActorAlias[actorIdx].onSfxExpression()
+			actorIdx+=1
+		endWhile
+
+		; Loop
+		RegisterForSingleUpdate(0.1)
+	endEvent
+
 	function FireAction()
 		UnregisterForUpdate()
 		; Prepare loop
@@ -311,52 +352,16 @@ state Animating
 		endIf
 		; Begin loop
 
-		; update volume
+		; 업데이트 액터 볼륨
 		float volume = GetVolume(Positions[0])
-		int idx=0
-		while idx < ActorAlias.length
-			ActorAlias[idx].onUpdateVolume(volume)
-			idx+=1
-		endWhile		
+		int actorIdx=0
+		while actorIdx < ActorAlias.length
+			ActorAlias[actorIdx].onUpdateActorVolume(volume)
+			actorIdx+=1
+		endWhile
 
 		RegisterForSingleUpdate(0.1)
 	endFunction
-
-	event OnUpdate()
-		; Debug.Trace("(thread update)")
-		; Update timer share
-		RealTime[0] = Utility.GetCurrentRealTime()
-		; Pause further updates if in menu
-		if HasPlayer && Utility.IsInMenuMode()
-			int idx=0
-			while idx < ActorAlias.length
-				ActorAlias[idx].onMenuModeEnter()
-				idx+=1
-			endWhile
-
-			while Utility.IsInMenuMode()
-				Utility.WaitMenuMode(1.5)
-				StageTimer += 1.2
-			endWhile
-			idx=0
-			while idx < ActorAlias.length
-				ActorAlias[idx].onMenuModeExit()
-				idx+=1
-			endWhile
-		endIf
-		; Advance stage on timer
-		if (AutoAdvance || TimedStage) && StageTimer < RealTime[0]
-			GoToStage((Stage + 1))
-			return
-		endIf
-		; Play SFX
-		if SoundFX && SFXTimer < RealTime[0]
-			SoundFX.Play(GetCenterFX())
-			SFXTimer = RealTime[0] + SFXDelay
-		endIf
-		; Loop
-		RegisterForSingleUpdate(0.5)
-	endEvent
 
 	function EndAction()
 		HookStageEnd()
@@ -811,10 +816,12 @@ state Animating
 		GoToState("Refresh")	
 		ModEvent.Send(ModEvent.Create(Key("Refresh")))
 
-		bool ready = false
-		while ready == false
-			int actorIdx = 0
-			int readyCount = 0
+		; Refresh 값 확인
+		int actorIdx = 0
+		int readyCount = 0
+		while readyCount < ActorCount
+			readyCount = 0
+			actorIdx = 0
 			while actorIdx < actorCount
 				if ActorAlias[actorIdx].kRefreshActor
 					readyCount += 1
@@ -822,11 +829,14 @@ state Animating
 				actorIdx += 1
 			endWhile
 			Utility.wait(0.1)
-
-			if readyCount == ActorCount
-				ready = true
-			endif
-		endWhile		
+		endWhile	
+	
+		; Refresh 값 초기화
+		actorIdx = 0
+		while actorIdx < actorCount
+			ActorAlias[actorIdx].kRefreshActor = false
+			actorIdx += 1
+		endWhile
 	endFunction
 endState
 
@@ -847,8 +857,6 @@ endState
 ; --- Context Sensitive Info                          --- ;
 ; ------------------------------------------------------- ;
 function SetAnimation(int aid = -1)
-
-	log("choose aid " + aid)
 
 	; Randomize if -1
 	if aid < 0 || aid >= Animations.Length
@@ -878,10 +886,7 @@ function SetAnimation(int aid = -1)
 	; Inform player of animation being played now
 	if HasPlayer
 		string msg = "Playing Animation: " + Animation.Name
-		SexLabUtil.PrintConsole(msg)
-		if DebugMode
-			Debug.Notification(msg)
-		endIf
+		SexLabUtil.PrintConsole(msg)		
 	endIf
 	; Update animation info
 	RecordSkills()
@@ -903,12 +908,12 @@ function SetAnimation(int aid = -1)
 		if Stage == 1
 			ResetPositions()
 		else
-			ActorAlias[0].SyncAll(true)
-			ActorAlias[1].SyncAll(true)
-			ActorAlias[2].SyncAll(true)
-			ActorAlias[3].SyncAll(true)
-			ActorAlias[4].SyncAll(true)
-			Utility.WaitMenuMode(0.2)
+			int actorIdx = 0
+			while actorIdx < actorCount
+				ActorAlias[actorIdx].SyncAll(true)
+				actorIdx += 1
+			endWhile
+			Utility.WaitMenuMode(0.1)
 			PlayStageAnimations()
 		endIf
 	endIf
@@ -999,52 +1004,78 @@ function EndLeadIn()
 		LeadIn = false
 
 		; leadin 이 종료된 후, 바로 이어지는 animation 의 경우
-		if Positions.length > 1
-			int[] _aniTagIds = new int[128]
-			int tagid = 0
-			int idx = 0
-			if Victims.length > 0
-				while tagid < Animations.length
-					if Animations[tagid].HasTag("Aggressive") || Animations[tagid].HasTag("Rape")
+		int[] _aniTagIds = new int[100]
+		int tagid = 0
+		int idx = 0
+		if Victims.length > 0
+			while tagid < Animations.length && idx < 100
+				if Animations[tagid].HasTag("Aggressive") || Animations[tagid].HasTag("Rape")
+					_aniTagIds[idx] = tagid
+					idx +=1
+				endIf
+				tagid += 1
+			endWhile			
+		else
+			if positions[0].GetRelationshipRank(positions[1]) == 1 || positions[0].GetRelationshipRank(positions[1]) == 4
+				while tagid < Animations.length && idx < 100
+					if Animations[tagid].HasTag("Loving")
 						_aniTagIds[idx] = tagid
 						idx +=1
 					endIf
 					tagid += 1
-				endWhile			
-			else
-				if positions[0].GetRelationshipRank(positions[1]) == 1 || positions[0].GetRelationshipRank(positions[1]) == 4
-					while tagid < Animations.length
-						if Animations[tagid].HasTag("Loving")
-							_aniTagIds[idx] = tagid
-							idx +=1
-						endIf
-						tagid += 1
-					endWhile
-				else 
-					while tagid < Animations.length
-						if Animations[tagid].HasTag("Prostitute")
-							_aniTagIds[idx] = tagid
-							idx +=1
-						endIf
-						tagid += 1
-					endWhile
-				endif
+				endWhile
+			else 
+				while tagid < Animations.length && idx < 100
+					if Animations[tagid].HasTag("Prostitute")
+						_aniTagIds[idx] = tagid
+						idx +=1
+					endIf
+					tagid += 1
+				endWhile
 			endif
-			if idx > 0
-				SetAnimation(_aniTagIds[Utility.RandomInt(0, idx - 1)])
-			else 				
-				log("eligible animation not found")
-				SetAnimation()							
-			endif 			
-		else 
-			SetAnimation()
 		endif
+		if idx > 0			
+			int[] _aniLevelTagIds = new int[100]
+			int idxLevel = 0
+			tagid = 0
+
+			if stats.sexCount(ActorAlias[0].actorRef) < 2
+				while tagid < idx
+					if Animations[_aniTagIds[tagid]].HasTag("Basic")
+						_aniLevelTagIds[idxLevel] = _aniTagIds[tagid]
+						idxLevel +=1
+					endIf
+					tagid += 1
+				endWhile
+			else 
+				while tagid < idx
+					if Animations[_aniTagIds[tagid]].HasTag("Apprentice") || Animations[_aniTagIds[tagid]].HasTag("Basic")
+						_aniLevelTagIds[idxLevel] = _aniTagIds[tagid]
+						idxLevel +=1
+					endIf
+					tagid += 1
+				endWhile
+			endif
+
+			if idxLevel > 0
+				SetAnimation(_aniLevelTagIds[Utility.RandomInt(0, idxLevel - 1)])
+			else 
+				SetAnimation(_aniTagIds[Utility.RandomInt(0, idx - 1)])
+			endif		
+
+			SetAnimation(_aniTagIds[Utility.RandomInt(0, idx - 1)])
+		else 				
+			log("eligible animation not found")
+			SetAnimation()							
+		endif 
 
 		int actorIdx = 0
 		while actorIdx < actorCount
-			ActorAlias[actorIdx].playDefaultAnimation()
+			ActorAlias[actorIdx].onStopRunningAnimation()
 			actorIdx += 1
 		endWhile
+
+		Utility.WaitMenuMode(3.0)
 
 		; Add runtime to foreplay skill xp
 		SkillXP[0] = SkillXP[0] + (TotalTime / 10.0)
@@ -1088,10 +1119,10 @@ state Ending
 		Config.DisableThreadControl(self)
 		
 		ModEvent.Send(ModEvent.Create(Key("Reset")))
-		bool ready = false
-		while ready == false
-			int actorIdx = 0
-			int readyCount = 0
+		
+		int actorIdx = 0
+		int readyCount = 0		
+		while readyCount < ActorCount
 			while actorIdx < actorCount
 				if ActorAlias[actorIdx].kResetActor
 					readyCount += 1
@@ -1099,15 +1130,19 @@ state Ending
 				actorIdx += 1
 			endWhile
 			Utility.wait(0.1)
-
-			if readyCount == ActorCount
-				ready = true
-			endif
-		endWhile				
+		endWhile
+		
+		actorIdx = 0
+		while actorIdx < actorCount
+			ActorAlias[actorIdx].kResetActor = false
+			actorIdx += 1
+		endWhile	
 	endEvent
+
 	event OnUpdate()
 		ResetDone()
 	endEvent
+
 	function ResetDone()
 		UnregisterforUpdate()
 		HookAnimationEnd()
@@ -1226,7 +1261,6 @@ function Initialize()
 	SkillTime   = 0.0
 	TimedStage  = false
 	Adjusted    = false
-	Prepared    = false
 	AdjustPos   = 0
 	AdjustAlias = ActorAlias[0]
 	parent.Initialize()
@@ -1239,25 +1273,27 @@ endFunction
 function PlayStageAnimations()
 	if Stage <= StageCount
 		Animation.GetAnimEvents(AnimEvents, Stage)
-		QuickEvent("PrepareAnimate")
-		; actoralias
-		bool ready = false
-		while ready == false
-			int actorIdx = 0
-			int readyCount = 0
+
+		int actorIdx = 0
+		if stage == 1		
 			while actorIdx < actorCount
-				if ActorAlias[actorIdx].KAnimateReady == Stage
-					readyCount += 1
-				endif
+				ActorAlias[actorIdx].onStartFirstStage()	; 첫 스테이징 시작 처리
 				actorIdx += 1
 			endWhile
-			Utility.wait(0.1)
+		endif
+		
+		actorIdx = 0
+		while actorIdx < actorCount
+			ActorAlias[actorIdx].PrepareStage()
+			actorIdx += 1	
+		endwhile
 
-			if readyCount == ActorCount
-				ready = true
-			endif
-		endWhile
-		QuickEvent("StartAnimate")
+		actorIdx = 0
+		while actorIdx < actorCount
+			ActorAlias[actorIdx].RunStage()
+			actorIdx += 1	
+		endwhile
+
 		StageTimer = RealTime[0] + GetTimer()
 	endIf
 endFunction

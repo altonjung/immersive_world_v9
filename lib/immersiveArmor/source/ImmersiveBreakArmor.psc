@@ -18,75 +18,53 @@ bool function isHuman(Actor _actor)
 	endif
 endfunction
 
-bool function handleArmorBroken(actor _victim, actor _aggressor, form _akSource, int _hitCount)
+bool function handleArmorBurn(actor _victim, actor _aggressor, form _akSource)
 
 	;화염 데미지라면..
-	if _akSource as Spell
-		Spell magicSpell = _akSource as spell
-		MagicEffect[] magicEffects = magicSpell.GetMagicEffects()
+	Spell magicSpell = _akSource as spell
+	MagicEffect[] magicEffects = magicSpell.GetMagicEffects()
 	
-		int idxx=0
-		while idxx < magicEffects.length
-			; 불 데미지라면 옷이 불에탐
-			if magicEffects[idxx].HasKeyWordString("MagicDamageFire")
-				Armor[] actorArmorList = new Armor[7]						
-				actorArmorList[0]	= _victim.GetWornForm(0x00000008) As Armor	; actorHand
-				actorArmorList[1]	= _victim.GetWornForm(0x00000080) As Armor	; actorFeet
-				actorArmorList[2]	= _victim.GetWornForm(0x00000010) As Armor	; actorArm					
-				actorArmorList[3] 	= _victim.GetWornForm(0x00200000) as Armor	; actorChest
-				actorArmorList[4]	= _victim.GetWornForm(0x00000004) as Armor	; actorArmor
-				actorArmorList[5] 	= _victim.GetWornForm(0x00400000) as Armor	; actorPanty
-				actorArmorList[6] 	= _victim.GetWornForm(0x00004000) as Armor	; actorFace
-				
-				int idx = Utility.RandomInt(0, 3)
-				
-				while idx < actorArmorList.length 												
-						if actorArmorList[idx]					
-							float torePercentage =  _getBurnPercentage(_victim, _aggressor, actorArmorList[idx], _hitCount)
-							if torePercentage > 90.0
-								Debug.Notification("burn cloth")
-								_handleArmorDropped(_victim, actorArmorList[idx])
-								return true
-							endif 	
-							return false
-						endif			
-						idx += 1
-				endwhile
-				return false
-			endif
-			idxx += 1
-		endwhile
-	elseif _akSource as Weapon 		
-
-		Weapon _weapon = _akSource as Weapon
-
-		Armor[] actorArmorList = new Armor[6]
-		; 근접 데미지라면..
-		if !isHuman(_aggressor)
-			; 짐승타입 Npc 공격은 하체 위주 방어구에 영향을 받음			
+	int idxx=0
+	while idxx < magicEffects.length
+		; 불 데미지라면 옷이 불에탐
+		if magicEffects[idxx].HasKeyWordString("MagicDamageFire")
+			Armor[] actorArmorList = new Armor[7]						
 			actorArmorList[0]	= _victim.GetWornForm(0x00000008) As Armor	; actorHand
 			actorArmorList[1]	= _victim.GetWornForm(0x00000080) As Armor	; actorFeet
 			actorArmorList[2]	= _victim.GetWornForm(0x00000010) As Armor	; actorArm					
 			actorArmorList[3] 	= _victim.GetWornForm(0x00200000) as Armor	; actorChest
 			actorArmorList[4]	= _victim.GetWornForm(0x00000004) as Armor	; actorArmor
 			actorArmorList[5] 	= _victim.GetWornForm(0x00400000) as Armor	; actorPanty
-
-			int idx = Utility.RandomInt(0, 4)
-			while idx < actorArmorList.length 
-													
-					if actorArmorList[idx]
-						float torePercentage =  _getWornPercentage(_victim, _aggressor, actorArmorList[idx], _hitCount)
-						if torePercentage > 90.0
-							Debug.Notification("worn cloth")
-							_handleArmorTaken(_victim, _aggressor, actorArmorList[idx])
-							return true
-						endif 	
-						return false
-					endif
-		
-					idx += 1
+			actorArmorList[6] 	= _victim.GetWornForm(0x00004000) as Armor	; actorFace
+				
+			int idx = 0
+				
+			while idx < actorArmorList.length 												
+				if actorArmorList[idx]					
+					float torePercentage =  _getBurnPercentage(_victim, _aggressor, actorArmorList[idx], _hitCount)
+					if torePercentage > 90.0
+						Debug.Notification("burn cloth")
+						_handleArmorBurn(_victim, actorArmorList[idx])
+						return true
+					endif 	
+					return false
+					endif			
+				idx += 1
 			endwhile
-		else 
+			return false
+		endif
+		idxx += 1
+	endwhile
+	return false
+endfunction
+
+bool function handleArmorDrop(actor _victim, actor _aggressor, form _akSource, int _hitCount)	
+
+		Weapon _weapon = _akSource as Weapon
+
+		Armor[] actorArmorList = new Armor[6]
+		; 근접 데미지라면..
+		if isHuman(_aggressor)
 			if _isMeleeWeapon(_weapon)			
 				; 인간타입 Npc 공격은 상체 위주 방어구에 영향을 받음			
 				actorArmorList[0] 	= _victim.GetWornForm(0x00000020) as Armor	; actorAmulet
@@ -112,68 +90,89 @@ bool function handleArmorBroken(actor _victim, actor _aggressor, form _akSource,
 						idx += 1
 				endwhile
 			endif
+		else 
+			; 짐승타입 Npc 공격은 하체 위주 방어구에 영향을 받음			
+			actorArmorList[0]	= _victim.GetWornForm(0x00000008) As Armor	; actorHand
+			actorArmorList[1]	= _victim.GetWornForm(0x00000080) As Armor	; actorFeet
+			actorArmorList[2]	= _victim.GetWornForm(0x00000010) As Armor	; actorArm					
+			actorArmorList[3] 	= _victim.GetWornForm(0x00200000) as Armor	; actorChest
+			actorArmorList[4]	= _victim.GetWornForm(0x00000004) as Armor	; actorArmor
+			actorArmorList[5] 	= _victim.GetWornForm(0x00400000) as Armor	; actorPanty
+
+			int idx = 0
+			while idx < actorArmorList.length 													
+					if actorArmorList[idx] && shouldWornArmor(actorArmorList[idx])
+						Debug.Notification("worn cloth")
+						_handleClothWorn(_victim, actorArmorList[idx])
+						return true
+					endif 							
+					idx += 1
+			endwhile
 		endif
-	endif
 
 	return false
 endfunction
 
 ; 대상 공격에 대한 방어시 방패나 무기에 대해 대해 일정 확률로 바닥에 drop
-bool function handleWeaponDrop(actor _victim, actor _aggressor, form _akSource, int _hitCount)
+; bool function handleWeaponDrop(actor _victim, actor _aggressor, form _akSource, int _hitCount)
 
-	Weapon _weapon = _akSource as Weapon
+; 	Weapon _weapon = _akSource as Weapon
 
-	if _isMeleeWeapon(_weapon)
-			; -1 - None
-			; 0 - Male
-			; 1 - Female
-			float dropPercentage = _getDropPercentage(_victim, _aggressor, _hitCount)
+; 	if _isMeleeWeapon(_weapon)
+; 			; -1 - None
+; 			; 0 - Male
+; 			; 1 - Female
+; 			float dropPercentage = _getDropPercentage(_victim, _aggressor, _hitCount)
 					
-			if 3 > _victim.GetActorValue("Stamina") && dropPercentage > 90.0
-				if _victim.GetEquippedShield()
-					_handleArmorDropped(_victim, _victim.GetEquippedShield())
-				elseif _victim.GetEquippedWeapon(true) ; left weapon				
-					_handleWeaponDropped(_victim, _victim.GetEquippedWeapon(true))				
-				elseif _victim.GetEquippedWeapon(false) ; right weapon
-					_handleWeaponDropped(_victim, _victim.GetEquippedWeapon(false))
-				else 
-					; fist
-					Armor[] actorArmorList = new Armor[2]
+; 			if 3 > _victim.GetActorValue("Stamina") && dropPercentage > 90.0
+; 				if _victim.GetEquippedShield()
+; 					_handleArmorDropped(_victim, _victim.GetEquippedShield())
+; 				elseif _victim.GetEquippedWeapon(true) ; left weapon				
+; 					_handleWeaponDropped(_victim, _victim.GetEquippedWeapon(true))				
+; 				elseif _victim.GetEquippedWeapon(false) ; right weapon
+; 					_handleWeaponDropped(_victim, _victim.GetEquippedWeapon(false))
+; 				else 
+; 					; fist
+; 					Armor[] actorArmorList = new Armor[2]
 
-					actorArmorList[0]	= _victim.GetWornForm(0x00000008) As Armor	; actorHand
-					actorArmorList[1]	= _victim.GetWornForm(0x00000010) As Armor	; actorArm	
+; 					actorArmorList[0]	= _victim.GetWornForm(0x00000008) As Armor	; actorHand
+; 					actorArmorList[1]	= _victim.GetWornForm(0x00000010) As Armor	; actorArm	
 						
-					int idx = 0
+; 					int idx = 0
 						
-					; armor
-					while idx < actorArmorList.length 
+; 					; armor
+; 					while idx < actorArmorList.length 
 	
-						if actorArmorList[idx]
-							Debug.Notification("broken weapon")
-							_handleArmorDropped(_victim, actorArmorList[idx])						
-							return true
-						endif						
+; 						if actorArmorList[idx]
+; 							Debug.Notification("broken weapon")
+; 							_handleArmorDropped(_victim, actorArmorList[idx])						
+; 							return true
+; 						endif						
 	
-						idx += 1
-					endwhile
-				endif				
-			endif
-		endif
+; 						idx += 1
+; 					endwhile
+; 				endif				
+; 			endif
+; 		endif
 
-		return false
-endfunction
+; 		return false
+; endfunction
 
 bool function _handleClothWorn (Actor _actor, Armor _armor)
-	if _armor.IsClothing() && !_armor.IsHeavyArmor() && !_armor.IsLightArmor()
+	if isVulerableArmor(_armor)
 		return _handleArmorRemoved(_actor, _armor)
 	endif 
 
 	return false
 endFunction
 
-bool function _handleArmorBroken (Actor _actor, Armor _armor)
+bool function _handleArmorBurn(Actor _actor, Armor _armor)
 	return _handleArmorRemoved(_actor, _armor)
 endFunction
+
+; bool function _handleArmorBroken (Actor _actor, Armor _armor)
+; 	return _handleArmorRemoved(_actor, _armor)
+; endFunction
 
 bool function _handleArmorRemoved (Actor _actor, Armor _armor)
 	_actor.RemoveItem(_armor)
@@ -186,33 +185,14 @@ bool function _handleArmorTaken (Actor _victim, Actor _aggressor, Armor _armor)
 	return true	
 endFunction
 
-bool function _handleArmorDropped (Actor _actor, Armor _armor)
-	_actor.DropObject(_armor)
-	return true	
-endFunction
-
-bool function _handleWeaponDropped (Actor _actor, Weapon _weapon)
-	_actor.DropObject(_weapon)
-	return true	
-endFunction
+; bool function _handleArmorDropped (Actor _actor, Armor _armor)
+; 	_actor.DropObject(_armor)
+; 	return true	
+; endFunction
 
 bool Function _isMeleeWeapon(Weapon _weapon)
 	return _weapon.IsMace() || _weapon.IsGreatsword() || _weapon.IsWarhammer() || _weapon.IsWarAxe() || _weapon.IsBattleaxe()
 EndFunction 
-
-float function _getDropPercentage(actor _victim, actor _aggressor, int _hitCount)
-	; -1 - None
-	; 0 - Male
-	; 1 - Female
-	float dropPercentage = Utility.RandomInt(30 + _hitCount, 70 + _hitCount)
-		
-	if  _victim.GetActorBase().GetSex() == 0 ; 공격자가 남자라면
-		dropPercentage = dropPercentage * 1.2
-	endif
-
-	return dropPercentage
-
-endfunction
 
 float function _getBurnPercentage(actor _victim, actor _aggressor, armor _armor, int _hitCount)
 
@@ -232,28 +212,21 @@ float function _getBurnPercentage(actor _victim, actor _aggressor, armor _armor,
 	return dropPercentage
 endfunction
 
-float function _getWornPercentage(actor _victim, actor _aggressor, armor _armor, int _hitCount)
+bool function shouldWornArmor(armor _armor)
 	; -1 - None
 	; 0 - Male
 	; 1 - Female
-	float dropPercentage = 0.0
 
-	if _armor.IsLightArmor()	
-		dropPercentage = Utility.RandomInt(1 + _hitCount, 30 + _hitCount)
-	endif 
+	if isVulerableArmor(_armor)
+		float percentage = 100.0 - getWornPercentage(_armor)
+		float targetPer = Utility.RandomFloat(0.0, 100.0)
 
-	if _armor.IsHeavyArmor()		
-		dropPercentage = Utility.RandomInt(1 + _hitCount, 20 + _hitCount)
-	endif 
-
-	if _armor.IsClothing()
-		dropPercentage = Utility.RandomInt(30 + _hitCount, 50 + _hitCount)
-		if _victim.GetActorBase().GetSex() == 0 ; 공격자가 남자라면
-			dropPercentage = dropPercentage * 1.2
+		if targetPer < percentage
+			return true
 		endif 
-	endif 
-
-	return dropPercentage
+		return false
+	endif
+	return false
 endfunction
 
 float function _getBrokenPercentage(actor _victim, actor _aggressor, armor _armor, int _hitCount)
@@ -287,32 +260,38 @@ float function _getBrokenPercentage(actor _victim, actor _aggressor, armor _armo
 	return dropPercentage
 endfunction
 
-bool function _checkWornItem(Actor _actor, Armor _armor)
-	bool returnValue = false
-	if _armor.IsClothingBody() || _armor.IsHeavyArmor() || _armor.IsLightArmor() || _armor.IsCuirass()
-		if _actor.GetWornForm(0x00000004)				
-			returnValue = true
-		endif
-	elseif _armor.IsHelmet() || _armor.IsClothingHead()
-		if _actor.GetWornForm(0x00000001)	
-			returnValue = true
-		endif 
-	elseif _armor.IsBoots() || _armor.IsClothingFeet()
-		if _actor.GetWornForm(0x00000080)			
-			returnValue = true
-		endif
-	elseif _armor.IsGauntlets()
-		if _actor.GetWornForm(0x00000010)		
-			returnValue = true
-		endif
-	else 
-		if _actor.GetWornForm(0x00004000)	
-			returnValue = true
+bool function isVulerableArmor(Armor _armor)
+
+	if !_armor.GetEnchantment()	; 마법옷이라면, burn 되지 않음
+		if _armor.IsClothingBody()
+			return true
+		elseif _armor.IsClothingHead()
+			return true
+		elseif _armor.IsClothingFeet()
+			return true
+		elseif _armor.IsClothingHands()
+			return true
 		endif
 	endif
+	return false
+endFunction 
 
-	return returnValue
-endfunction
+
+float function getWornPercentage(Armor _armor)
+
+	if !_armor.GetEnchantment()	; 마법옷이라면, burn 되지 않음
+		if _armor.IsClothingBody()
+			return 2.0
+		elseif _armor.IsClothingHead()
+			return 50.0
+		elseif _armor.IsClothingFeet()
+			return 80.0
+		elseif _armor.IsClothingHands()
+			return 80.0
+		endif
+	endif
+	return 0.0
+endFunction
 
 bool function isActorFemale(Actor _actor) 
 	if _actor.GetActorBase().GetSex() == 1

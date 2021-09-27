@@ -64,8 +64,6 @@ sslBaseAnimation[] property Animations hidden
 	endFunction
 endProperty
 
-bool property isBedAction auto hidden
-
 ; Stat Tracking Info
 float[] property SkillBonus auto hidden ; [0] Foreplay, [1] Vaginal, [2] Anal, [3] Oral, [4] Pure, [5] Lewd
 float[] property SkillXP auto hidden    ; [0] Foreplay, [1] Vaginal, [2] Anal, [3] Oral, [4] Pure, [5] Lewd
@@ -1471,9 +1469,7 @@ function CenterOnCoords(float LocX = 0.0, float LocY = 0.0, float LocZ = 0.0, fl
 	CenterLocation[5] = RotZ
 endFunction
 
-bool function CenterOnBed(bool AskPlayer = true, float Radius = 750.0)
-	isBedAction = false
-	
+bool function CenterOnBed(bool AskPlayer = true, float Radius = 750.0)	
 	bool InStart = GetState() == "Starting" || GetState() == "Making"
 	int AskBed = Config.AskBed
 	if BedStatus[0] == -1 || (InStart && (!HasPlayer && Config.NPCBed == 0) || (HasPlayer && AskBed == 0))
@@ -1488,7 +1484,6 @@ bool function CenterOnBed(bool AskPlayer = true, float Radius = 750.0)
 			int BedType = ThreadLib.GetBedType(FoundBed)
 			if BedType > 0 && (ActorCount < 4 || BedType != 2)
 				CenterOnObject(FoundBed)
-				isBedAction = true
 				return true ; Bed found and approved for use
 			endIf
 		endIf
@@ -1502,7 +1497,6 @@ bool function CenterOnBed(bool AskPlayer = true, float Radius = 750.0)
 	; Found a bed AND EITHER forced use OR don't care about players choice OR or player approved
 	if FoundBed && (BedStatus[0] == 1 || (!AskPlayer || (AskPlayer && (Config.UseBed.Show() as bool))))
 		CenterOnObject(FoundBed)
-		isBedAction = true
 		return true ; Bed found and approved for use
 	endIf
 	return false ; No bed found

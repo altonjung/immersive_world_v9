@@ -1725,7 +1725,7 @@ function ExportJSON()
 	JsonUtil.Unload(Filename)
 endFunction
 
-function doSfxEyeExpression(Actor _actorRef, int position, string sfxExpression, int strength)
+int function getExpression(Actor _actorRef, string sfxExpression)
 	;				  		    7 - Mood Neutral
 	; 0 - Dialogue Anger		8 - Mood Anger		15 - Combat Anger
 	; 1 - Dialogue Fear			9 - Mood Fear		16 - Combat Shout
@@ -1736,7 +1736,6 @@ function doSfxEyeExpression(Actor _actorRef, int position, string sfxExpression,
 	; 6 - Dialogue Disgusted	14 - Mood Disgusted
 	; aiStrength is from 0 to 100 (percent)
 
-	; 표정
 	int expressionIdx = 7
 	if sfxExpression == "Anger"
 		expressionIdx = 8
@@ -1755,10 +1754,16 @@ function doSfxEyeExpression(Actor _actorRef, int position, string sfxExpression,
 	elseif sfxExpression == "Shout"
 		expressionIdx = 16
 	endif
+	return expressionIdx
+endFunction
+
+function doSfxEyeExpression(Actor _actorRef, int position, int expressionIdx, int strength)
 
 	; 눈썹
 	_actorRef.SetExpressionOverride(expressionIdx, Utility.RandomInt(80, 100))
 		
+	strength = strength * 3
+
 	int mok = strength / 50
 	int remain = strength % 50
 	float _strength = 0.0
@@ -1819,40 +1824,8 @@ function doSfxEyeExpression(Actor _actorRef, int position, string sfxExpression,
 	; endif
 endFunction 
 
-
-
-function doSfxMouthExpression(Actor _actorRef, int position, string sfxExpression, int strength, int baseStart, bool OpenMouth)
-	;				  		    7 - Mood Neutral
-	; 0 - Dialogue Anger		8 - Mood Anger		15 - Combat Anger
-	; 1 - Dialogue Fear			9 - Mood Fear		16 - Combat Shout
-	; 2 - Dialogue Happy		10 - Mood Happy
-	; 3 - Dialogue Sad			11 - Mood Sad
-	; 4 - Dialogue Surprise		12 - Mood Surprise
-	; 5 - Dialogue Puzzled		13 - Mood Puzzled
-	; 6 - Dialogue Disgusted	14 - Mood Disgusted
-	; aiStrength is from 0 to 100 (percent)
-
-	; 표정
-	int expressionIdx = 7
-	if sfxExpression == "Anger"
-		expressionIdx = 8
-	elseif sfxExpression == "Fear"
-		expressionIdx = 9
-	elseif sfxExpression == "Happy"
-		expressionIdx = 10	
-	elseif sfxExpression == "Sad"
-		expressionIdx = 11
-	elseif sfxExpression == "Surprise"
-		expressionIdx = 12
-	elseif sfxExpression == "Puzzled"
-		expressionIdx = 13
-	elseif sfxExpression == "Disgusted"
-		expressionIdx = 14
-	elseif sfxExpression == "Shout"
-		expressionIdx = 16
-	endif
-
-	strength = strength * 2
+function doSfxMouthExpression(Actor _actorRef, int position, int expressionIdx, int strength, int baseStart, bool OpenMouth)
+	strength = strength * 5
 	int mok = strength / 80
 	int remain = strength % 80
 	float _strength = 0.0
@@ -1886,7 +1859,7 @@ function doSfxMouthExpression(Actor _actorRef, int position, string sfxExpressio
 		endif
 	endif
 
-	if position == 0
-		log("expressionMouth " + sfxExpression + ", strength " + _strength + ", expressionIdx " + expressionIdx + ", baseStart " + baseStart)
-	endif
+	; if position == 0
+	; 	log("expressionIdx " + expressionIdx + ", strength " + _strength + ", baseStart " + baseStart)
+	; endif
 endFunction 

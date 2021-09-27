@@ -749,17 +749,6 @@ EndEvent
 Event OnLycanthropyStateChanged(bool abIsWerewolf)
 EndEvent
 
-; Event received when this actor equips something - akReference may be None if object is not persistent
-Event OnObjectEquipped(Form akBaseObject, ObjectReference akReference)
-	if akBaseObject as Weapon || akBaseObject as Armor
-		hitCount = 0
-	endif 
-EndEvent
-
-; Event received when this actor unequips something - akReference may be None if object is not persistent
-Event OnObjectUnequipped(Form akBaseObject, ObjectReference akReference)
-EndEvent
-
 ; Event received when this actor starts a new package
 Event OnPackageStart(Package akNewPackage)
 EndEvent
@@ -1000,18 +989,31 @@ Event OnHit(ObjectReference akAggressor, Form akSource, Projectile akProjectile,
 	if armorBreakBridge
 		Actor aggressor = akAggressor as Actor
 
-		if abHitBlocked
-			if armorBreakBridge.handleWeaponDrop(self, akAggressor as actor, akSource, hitCount)
-				hitCount = 0
-			endif
-		else
-			hitCount += 1
-			if abPowerAttack || aggressor.HasKeyWordString("ActorTypeCreature") || akSource as Spell
+		if !abHitBlocked			
+			if abPowerAttack || aggressor.HasKeyWordString("ActorTypeCreature")
+				hitCount += 1				
 				if armorBreakBridge.handleArmorBroken(self, aggressor, akSource, hitCount)
+					hitCount = 0
+				endif
+			elseif  akSource as Spell
+				if armorBreakBridge.handleArmorBurn(self, aggressor, akSource, hitCount)
 					hitCount = 0
 				endif
 			endif
 		endif
+	endif
+EndEvent
+
+
+Event OnObjectEquipped(Form akBaseObject, ObjectReference akReference)		
+	if armorBreakBridge.isPlayer(self) && armorBreakBridge.isActorFemale(self) && !armorBreakBridge.isWornHalfNaked(self)
+		self.AddToFaction(armorBreakBridge.getBanditFriendFaction())
+	endif
+EndEvent
+
+Event OnObjectUnequipped(Form akBaseObject, ObjectReference akReference)
+	if armorBreakBridge.isPlayer(self) && armorBreakBridge.isActorFemale(self) && armorBreakBridge.isWornHalfNaked(self)	
+		self.RemoveFromFaction(armorBreakBridge.getBanditFriendFaction())
 	endif
 EndEvent
 

@@ -3,6 +3,7 @@ Scriptname ImmersiveBridge extends Quest
 Import Utility
 
 Actor Property Player  Auto
+Faction property banditFriendFaction Auto
 
 int Version
 int Function VersionCheck()
@@ -23,12 +24,29 @@ function init()
 	endif
 endfunction
 
-bool function handleWeaponDrop (actor _victim, actor _aggressor, form _akSource, int hitCount)
-	 return imsBreakArmorQuest.handleWeaponDrop(_victim, _aggressor, _akSource, hitCount)
-endfunction
+; bool function handleWeaponDrop (actor _victim, actor _aggressor, form _akSource, int hitCount)
+; 	 return imsBreakArmorQuest.handleWeaponDrop(_victim, _aggressor, _akSource, hitCount)
+; endfunction
 
 bool function handleArmorBroken (actor _victim, actor _aggressor, form _akSource, int hitCount)
 	return imsBreakArmorQuest.handleArmorBroken(_victim, _aggressor, _akSource, hitCount)
+endfunction
+
+bool function handleArmorBurn (actor _victim, actor _aggressor, form _akSource)
+	return imsBreakArmorQuest.handleArmorBurn(_victim, _aggressor, _akSource)
+endfunction
+
+
+Faction function getBanditFriendFaction()
+	return banditFriendFaction
+endFunction 
+
+bool function isPlayer (Actor _actor) 
+	if Player == _actor 
+		return true
+	else
+		return false
+	endif	
 endfunction
 
 bool function isActorFemale(Actor _actor) 
