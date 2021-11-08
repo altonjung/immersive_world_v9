@@ -29,10 +29,8 @@ Sound 	property SfxFuckSound auto hidden
 Sound	property SfxBedSound auto hidden
 Sound   property sfxSquishing auto hidden
 
-Spell   property sfxDibellaSpell auto hidden
-Spell   property sfxPoison1Spell auto hidden
-Spell   property sfxPoison2Spell auto hidden
-
+Spell   property sfxPoisonSpell auto hidden
+Faction property sfxBanditFaction auto hidden
 ; ------------------------------------------------------- ;
 ; --- Init                                 --- ;
 ; ------------------------------------------------------- ;
@@ -51,10 +49,9 @@ function init()
 	SfxFuckSound      	   = Game.GetFormFromFile(0x020012CB, "Sexlab_beta9 plus.esp") as Sound
 	SfxBedSound            = Game.GetFormFromFile(0x020012C9, "Sexlab_beta9 plus.esp") as Sound
 	sfxSquishing           = Game.GetFormFromFile(0x020058FF, "Sexlab_beta9 plus.esp") as Sound
-
-	sfxDibellaSpell		   = Game.GetFormFromFile(0x0010A766, "Skyrim.esm") as Spell
-	sfxPoison1Spell		   = Game.GetFormFromFile(0x000638B2, "Skyrim.esm") as Spell
-	sfxPoison2Spell		   = Game.GetFormFromFile(0x00053475, "Skyrim.esm") as Spell
+	
+	sfxPoisonSpell		   = Game.GetFormFromFile(0x000954D5, "Skyrim.esm") as Spell
+	sfxBanditFaction       = Game.GetFormFromFile(0x0001BCC5, "Skyrim.esm") as Faction
 endfunction
 
 ; ------------------------------------------------------- ;
@@ -1071,7 +1068,7 @@ function EndLeadIn()
 
 		int actorIdx = 0
 		while actorIdx < actorCount
-			ActorAlias[actorIdx].onStopRunningAnimation()
+			ActorAlias[actorIdx].onStopLeadInAnimation()
 			actorIdx += 1
 		endWhile
 
@@ -1123,20 +1120,52 @@ state Ending
 		int actorIdx = 0
 		int readyCount = 0		
 		while readyCount < ActorCount
-			while actorIdx < actorCount
+			actorIdx = 0
+			readyCount = 0
+			while actorIdx < ActorCount
 				if ActorAlias[actorIdx].kResetActor
 					readyCount += 1
 				endif
 				actorIdx += 1
 			endWhile
 			Utility.wait(0.1)
-		endWhile
-		
-		actorIdx = 0
-		while actorIdx < actorCount
-			ActorAlias[actorIdx].kResetActor = false
-			actorIdx += 1
 		endWhile	
+
+		bool setBadRelation = false		
+		if HasPlayer && ActorCount > 1 && Victims.length > 0
+			setBadRelation = true
+		endif 
+
+		actorIdx = 0
+		while actorIdx < ActorCount
+			ActorAlias[actorIdx].kResetActor = false
+
+			; 관계 설정			
+			if setBadRelation
+				if positions[actorIdx] != PlayerRef	&& Utility.RandomInt(1, 10) > 5		
+					int relationShipWithPlayer = PlayerRef.GetRelationshipRank(positions[actorIdx])
+					relationShipWithPlayer -= 4
+
+					positions[actorIdx].SetRelationshipRank(Game.GetPlayer(), relationShipWithPlayer)
+					log("change relationship with player " + relationShipWithPlayer)
+
+					if relationShipWithPlayer <= -4
+						positions[actorIdx].AddToFaction(sfxBanditFaction)
+					endif
+				endif 
+			else 
+				int relationShipWithPlayer = PlayerRef.GetRelationshipRank(positions[actorIdx])
+				if positions[actorIdx] != PlayerRef	&& Utility.RandomInt(1, 10) > 5
+					relationShipWithPlayer += 1
+					positions[actorIdx].SetRelationshipRank(Game.GetPlayer(), relationShipWithPlayer)
+					log("change relationship with player " + relationShipWithPlayer)
+				endif
+			endif
+
+			actorIdx += 1
+		endWhile
+		log("EndScene..")
+		RegisterForSingleUpdate(0.1)		
 	endEvent
 
 	event OnUpdate()
@@ -1277,7 +1306,7 @@ function PlayStageAnimations()
 		int actorIdx = 0
 		if stage == 1		
 			while actorIdx < actorCount
-				ActorAlias[actorIdx].onStartFirstStage()	; 첫 스테이징 시작 처리
+				ActorAlias[actorIdx].ReadyScene()	; 첫 스테이징 시작 처리
 				actorIdx += 1
 			endWhile
 		endif

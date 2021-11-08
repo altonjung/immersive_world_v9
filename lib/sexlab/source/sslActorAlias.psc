@@ -1260,6 +1260,8 @@ function Strip()
 	if !ActorRef || IsCreature
 		return
 	endIf
+
+	log("strip..")
 	; Start stripping animation
 	;if DoUndress
 	;	Debug.SendAnimationEvent(ActorRef, "Arrok_Undress_G"+BaseSex)
@@ -1725,9 +1727,6 @@ int      sfxOrgasmVoiceId
 ; ------------------------------------------------------- ;
 ; --- Animation Loop                                  --- ;
 ; ------------------------------------------------------- ;
-function onStartFirstStage()
-endFunction	
-
 function onUpdateActorVolume(float volume)
 endFunction
 
@@ -1737,7 +1736,7 @@ endFunction
 function onMenuModeExit()
 endFunction 
 
-function onStopRunningAnimation()
+function onStopLeadInAnimation()
 endFunction
 
 function playSfxSound(float onUpdateStartTime, String blockType)
@@ -1748,6 +1747,9 @@ endFunction
 
 function onSfxExpression()
 endFunction
+
+function ReadyScene()
+endFunction	
 
 function PrepareStage()
 endFunction
@@ -1801,19 +1803,19 @@ state Animating
 		actorVolume = _volume
 	endFunction	
 	
-	function onStopRunningAnimation()
+	function onStopLeadInAnimation()
 
 		; Neutral expression
 		MfgConsoleFunc.ResetPhonemeModifier(ActorRef) 
 
-		String defaultAnimation = ""
-		if isFemale
-			defaultAnimation = "SexLabSequenceFemaleExit1"
-		else
-			defaultAnimation = "SexLabSequenceMaleExit1"
-		endif		
+		; String defaultAnimation = ""
+		; if isFemale
+		; 	defaultAnimation = "SexLabSequenceFemaleExit1"
+		; else
+		; 	defaultAnimation = "SexLabSequenceMaleExit1"
+		; endif		
 
-		Debug.SendAnimationEvent(ActorRef, defaultAnimation)
+		; Debug.SendAnimationEvent(ActorRef, defaultAnimation)
 	endFunction
 	
 	function onSfxExpression()
@@ -1836,8 +1838,8 @@ state Animating
 		endif
 	endfunction
 
-	function onStartFirstStage()
-		Log("onStartFirstStage!!!")
+	function ReadyScene()
+		Log("ReadyScene!!!")
 	
 		initState()
 		LoadShares()
@@ -1862,13 +1864,11 @@ state Animating
 		if position == 0 && isFemale 
 			if Stats.SexCount(ActorRef) == 0
 				Debug.Notification(actorRef.GetActorBase().GetName() + " is virgin")
-			elseif Stats.SexCount(ActorRef) < 10
-				Debug.Notification(actorRef.GetActorBase().GetName() + " is fresh yet")
-			else
+			elseif Stats.SexCount(ActorRef) > 20
 				Debug.Notification(actorRef.GetActorBase().GetName() + " is hole")
 			endif
 		endif		
-		
+
 		;팩션 랭크 업데이트
 		; ActorRef.SetFactionRank(Thread.SfxPositionFaction, position)
 		; ActorRef.SetFactionRank(Thread.SfxPlayRoleFaction, Thread.SfxPlayRoleType)
@@ -1898,15 +1898,18 @@ state Animating
 		; 액션 처리
 		string [] actions = PapyrusUtil.StringSplit(sfxAction, ",")
 		int idx=0
-		while idx < actions.length
-			if actions[idx] == "undress"
-				if !isWornHalfNaked(actorRef)
-					Strip()
-					ResolveStrapon()
-				endif
-			endif			
-			idx += 1
-		endWhile
+
+		if LeadIn == true
+			while idx < actions.length
+				if actions[idx] == "undress"
+					if !isWornHalfNaked(actorRef)
+						Strip()
+						ResolveStrapon()
+					endif
+				endif			
+				idx += 1
+			endWhile
+		endif
 
 		; 사운드 타입 처리
 		if sfxSound != ""
@@ -1924,7 +1927,7 @@ state Animating
 		endif		
 	endFunction
 
-	function RunStage()		
+	function RunStage()
 		Log("RunStage!!!")
 
 		sfxPlayStatus = 1 ; play
@@ -2513,25 +2516,17 @@ function doMoanScene()
 		int randomNum = Utility.RandomInt(0,10)
 		String _SkillName = ""
 		if IsVictim
-			if randomNum < 5
-				_SkillName = "Block"
-				Thread.sfxPoison1Spell.cast(ActorRef, ActorRef)
-			else
-				_SkillName = "Speechcraft"
-				Thread.sfxPoison2Spell.cast(ActorRef, ActorRef)
-			endif
-			Game.AdvanceSkill(_SkillName , -3.0)
+			if randomNum < 3
+				Thread.sfxPoisonSpell.cast(ActorRef, ActorRef)
+			endif			
 		else
 			if randomNum < 5
 				_SkillName = "sneak"
 			else
 				_SkillName = "Speechcraft"
-			endif
-			Thread.sfxDibellaSpell.cast(ActorRef, ActorRef)
+			endif			
 			Game.AdvanceSkill(_SkillName , 1.0)
 		endif
-
-		Debug.Notification("gain special skill " + _SkillName)
 	endif	
 
 	kEndMoanActor = true

@@ -742,7 +742,9 @@ EndEvent
 
 ; Event that is triggered when this actor changes from one location to another
 Event OnLocationChange(Location akOldLoc, Location akNewLoc)
-	hitCount = 0
+	hitCount = 0	
+	biteCount = 0
+	burnCount = 0	
 EndEvent
 
 ; Received when the lycanthropy state of this actor changes (when SendLycanthropyStateChanged is called)
@@ -972,51 +974,123 @@ Function ResetExpressionOverrides() native
 ; Returns all factions with the specified min and max ranks (-128 to 127) 
 Faction[] Function GetFactions(int minRank, int maxRank) native
 
+; Event received when this actor equips something - akReference may be None if object is not persistent
+Event OnObjectEquipped(Form akBaseObject, ObjectReference akReference)
+EndEvent
+
+; Event received when this actor unequips something - akReference may be None if object is not persistent
+Event OnObjectUnequipped(Form akBaseObject, ObjectReference akReference)
+EndEvent
+
 ; Alton
-ImmersiveBridge armorBreakBridge = None
+ImmersiveBreakArmor breakArmor = None
 int hitCount = 0
+int biteCount = 0
+int burnCount = 0
+float lastFireBurnTime = 0.0
 
 Event OnLoad()	
-	if !isDead() && self.GetWornForm(0x00200000)
-		if armorBreakBridge == None 
+
+	if !isDead()
+		if breakArmor == None 
 			armorBreakModuleInit()
+			if breakArmor.isPlayer(self) && breakArmor.isActorFemale(self)
+				gotoState("playerFemaleRole")
+			endif
 		endif
 	endif
 EndEvent
 
 Event OnHit(ObjectReference akAggressor, Form akSource, Projectile akProjectile, bool abPowerAttack, bool abSneakAttack, bool abBashAttack, bool abHitBlocked)
 
-	if armorBreakBridge
+	; MiscUtil.PrintConsole("OnHit " + breakArmor + ", name " + self.GetActorBase().GetName())
+
+	if breakArmor
 		Actor aggressor = akAggressor as Actor
 
-		if !abHitBlocked			
-			if abPowerAttack || aggressor.HasKeyWordString("ActorTypeCreature")
-				hitCount += 1				
-				if armorBreakBridge.handleArmorBroken(self, aggressor, akSource, hitCount)
-					hitCount = 0
+		if !abHitBlocked		
+			if abPowerAttack
+				hitCount += 1
+
+				if hitCount > 25
+					breakArmor.handleArmorDrop(self, aggressor, akSource)
+					hitCount = hitCount / 2
 				endif
-			elseif  akSource as Spell
-				if armorBreakBridge.handleArmorBurn(self, aggressor, akSource, hitCount)
-					hitCount = 0
+			elseif aggressor.HasKeyWordString("ActorTypeGiant")
+				hitCount += 1
+
+				breakArmor.handleArmorDrop(self, aggressor, akSource)			
+				hitCount = hitCount / 2
+			elseif aggressor.HasKeyWordString("ActorTypeCreature")
+				biteCount += 1
+
+				if 5 < biteCount 
+					breakArmor.handleArmorBurn(self, aggressor, akSource)
+					biteCount = biteCount / 2
+				elseif 15 < biteCount
+					breakArmor.handleArmorBroken(self, aggressor, akSource)
+					biteCount = biteCount / 2
+				endif
+			elseif  checkFireSpell(akSource)
+				float currentTime = Utility.GetCurrentRealTime()	
+				if currentTime - lastFireBurnTime < 10
+					burnCount += 1
+				else 
+					burnCount = 1
+				endif
+				
+				lastFireBurnTime = currentTime
+
+				if burnCount > 5
+					breakArmor.handleArmorBurn(self, aggressor, akSource)
+					burnCount = burnCount / 2
 				endif
 			endif
 		endif
 	endif
 EndEvent
 
+bool function checkFireSpell(form _akSource)
+	Spell magicSpell = _akSource as spell
+	MagicEffect[] magicEffects = magicSpell.GetMagicEffects()
 
-Event OnObjectEquipped(Form akBaseObject, ObjectReference akReference)		
-	if armorBreakBridge.isPlayer(self) && armorBreakBridge.isActorFemale(self) && !armorBreakBridge.isWornHalfNaked(self)
-		self.AddToFaction(armorBreakBridge.getBanditFriendFaction())
-	endif
-EndEvent
+	int idxx=0
+	while idxx < magicEffects.length
+		; 불 데미지라면 옷이 불에탐
+		if magicEffects[idxx].HasKeyWordString("MagicDamageFire")
+			return true
+		endif
+		idxx += 1
+	endwhile
 
-Event OnObjectUnequipped(Form akBaseObject, ObjectReference akReference)
-	if armorBreakBridge.isPlayer(self) && armorBreakBridge.isActorFemale(self) && armorBreakBridge.isWornHalfNaked(self)	
-		self.RemoveFromFaction(armorBreakBridge.getBanditFriendFaction())
-	endif
-EndEvent
+	return false
+endfunction
+
+state playerFemaleRole
+	Event OnObjectEquipped(Form akBaseObject, ObjectReference akReference)
+		Armor _armor = akBaseObject as armor
+		if _armor.IsClothingBody()
+			self.RemoveFromFaction(breakArmor.getBanditFriendFaction())
+			self.RemoveFromFaction(breakArmor.getCreatureFriendFaction())
+			if _armor.HasKeywordString("BanditClothing")
+				Debug.Notification("you wore bandit's! bandit thinks you as slave or bandit")
+				self.AddToFaction(breakArmor.getBanditFriendFaction())
+			elseif _armor.HasKeywordString("CreatureClothing")
+				Debug.Notification("you wore animals's! animal thinks you as animal")
+				self.AddToFaction(breakArmor.getCreatureFriendFaction())
+			endif							
+		endif		
+	EndEvent
+
+	Event OnObjectUnequipped(Form akBaseObject, ObjectReference akReference)	
+		Armor _armor = akBaseObject as armor
+		if _armor.IsClothingBody()
+			Debug.Notification("you naked! bandit thinks you as slave or bandit")
+			self.AddToFaction(breakArmor.getBanditFriendFaction())
+		endif
+	EndEvent
+endState
 
 function armorBreakModuleInit()
-		armorBreakBridge =  (Game.GetFormFromFile(0x05005901, "AltonArmorBreak.esp") As ImmersiveBridge)
+	breakArmor =  (Game.GetFormFromFile(0x05005900, "AltonArmorBreak.esp") As ImmersiveBreakArmor)
 endfunction
