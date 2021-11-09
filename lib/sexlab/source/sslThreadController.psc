@@ -79,53 +79,28 @@ state Prepare
 			log("it has StartingAnimation " + StartingAnimation)
 			SetAnimation(Animations.Find(StartingAnimation))
 		else
-			int[] _aniTagIds = new int[100]
-			int tagid = 0
-			int idx = 0
-
-			if Victims.length > 0
-				while tagid < Animations.length && idx < 100
-					if Animations[tagid].HasTag("Rape")
-						_aniTagIds[idx] = tagid
-						idx +=1
-					endIf
-					tagid += 1
-				endWhile
-			else
-				; spouse or friend
-				if positions[0].GetRelationshipRank(positions[1]) == 1 || positions[0].GetRelationshipRank(positions[1]) == 4
-					while tagid < Animations.length && idx < 100
-						if Animations[tagid].HasTag("Loving")
-							_aniTagIds[idx] = tagid
-							idx +=1
-						endIf
-						tagid += 1
-					endWhile
-				else
-					while tagid < Animations.length && idx < 100
-						if Animations[tagid].HasTag("Prostitute")
-							_aniTagIds[idx] = tagid
-							idx +=1
-						endIf
-						tagid += 1
-					endWhile
-				endif
-			endif
-
-			if idx > 0
-				SetAnimation(_aniTagIds[Utility.RandomInt(0, idx - 1)])
-			else 
-				log("eligible animation not found")
-				SetAnimation()	
-			endif
-
+			selectAniamtion()
 			StartingAnimation = none
 		endIf
 		; Begin actor prep
-		ModEvent.Send(ModEvent.Create(Key("Prepare")))
 
 		int actorIdx = 0
 		int readyCount = 0
+
+		; 일반신인 경우, 첫번째 액터가 먼저 행위 수행
+		if victims.length == 0 
+			ActorAlias[0].PrepareActor()
+			while ActorAlias[0].kPrepareActor == false
+				Utility.wait(0.1)
+			endWhile
+
+			Utility.wait(5.0)
+		endif
+		
+		ModEvent.Send(ModEvent.Create(Key("Prepare")))
+		
+		actorIdx = 0
+		readyCount = 0
 		while readyCount < ActorCount
 			readyCount = 0
 			actorIdx = 0
@@ -172,7 +147,10 @@ state Prepare
 		SendThreadEvent("AnimationStart")
 		if LeadIn
 			SendThreadEvent("LeadInStart")
+		else 
+			QuickEvent("Strip")
 		endIf
+		
 		; Start time trackers
 		RealTime[0] = Utility.GetCurrentRealTime()
 		SkillTime = RealTime[0]
@@ -222,7 +200,7 @@ endState
 
 state Advancing
 	function FireAction()
-		Log("Stage: "+ Stage + ", StageCount: " + StageCount, "Advancing")
+		log("Stage " + Stage + ", StageCount " + StageCount + " in Advancing")
 
 		if  Stage > StageCount
 			if LeadIn
@@ -258,7 +236,7 @@ state Advancing
 				actorIdx += 1
 			endWhile
 				
-			RegisterForSingleUpdate(0.1)					
+			SyncDone()
 		endif 
 	endFunction
 
@@ -279,14 +257,30 @@ state Advancing
 	endEvent
 endState
 
-state Animating
+; @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+; @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+; @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+; @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+; @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+; @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-	; @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-	; @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-	; @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-	; @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-	; @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-	; @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+state Animating
+	function FireAction()
+		UnregisterForUpdate()
+		; Prepare loop
+		RealTime[0] = Utility.GetCurrentRealTime()
+		SoundFX  = Animation.GetSoundFX(Stage)
+		SFXDelay = ClampFloat(BaseDelay - ((Stage * 0.3) * ((Stage != 1) as int)), 0.5, 30.0)
+		ResolveTimers()
+		PlayStageAnimations()
+		; Send events
+		if !LeadIn && Stage >= StageCount && !DisableOrgasms
+			SendThreadEvent("OrgasmStart")
+			TriggerOrgasm()
+		endIf
+		; Begin loop
+		RegisterForSingleUpdate(0.1)
+	endFunction
 
 	event OnUpdate()
 		; Debug.Trace("(thread update)")
@@ -323,42 +317,18 @@ state Animating
 			SFXTimer = RealTime[0] + SFXDelay
 		endIf
 
-		; Play SfxExpression
+		; Play SfxExpression/volume
+		float volume = GetVolume(Positions[0])
 		int actorIdx=0
 		while actorIdx < ActorCount
-			ActorAlias[actorIdx].onSfxExpression()
+			ActorAlias[actorIdx].onUpdateActorVolume(volume)
+			ActorAlias[actorIdx].onUpdateSfxExpression()
 			actorIdx+=1
 		endWhile
 
 		; Loop
-		RegisterForSingleUpdate(0.1)
+		RegisterForSingleUpdate(0.2)
 	endEvent
-
-	function FireAction()
-		UnregisterForUpdate()
-		; Prepare loop
-		RealTime[0] = Utility.GetCurrentRealTime()
-		SoundFX  = Animation.GetSoundFX(Stage)
-		SFXDelay = ClampFloat(BaseDelay - ((Stage * 0.3) * ((Stage != 1) as int)), 0.5, 30.0)
-		ResolveTimers()
-		PlayStageAnimations()
-		; Send events
-		if !LeadIn && Stage >= StageCount && !DisableOrgasms
-			SendThreadEvent("OrgasmStart")
-			TriggerOrgasm()
-		endIf
-		; Begin loop
-
-		; 업데이트 액터 볼륨
-		float volume = GetVolume(Positions[0])
-		int actorIdx=0
-		while actorIdx < ActorAlias.length
-			ActorAlias[actorIdx].onUpdateActorVolume(volume)
-			actorIdx+=1
-		endWhile
-
-		RegisterForSingleUpdate(0.1)
-	endFunction
 
 	function EndAction()
 		HookStageEnd()
@@ -392,7 +362,6 @@ state Animating
 	endFunction
 
 	function ChangeAnimation(bool backwards = false)
-		log("ChangeAnimation")
 		if Animations.Length < 2
 			return ; Nothing to change
 		endIf
@@ -1001,74 +970,11 @@ function EndLeadIn()
 		LeadIn = false
 
 		; leadin 이 종료된 후, 바로 이어지는 animation 의 경우
-		int[] _aniTagIds = new int[100]
-		int tagid = 0
-		int idx = 0
-		if Victims.length > 0
-			while tagid < Animations.length && idx < 100
-				if Animations[tagid].HasTag("Aggressive") || Animations[tagid].HasTag("Rape")
-					_aniTagIds[idx] = tagid
-					idx +=1
-				endIf
-				tagid += 1
-			endWhile			
-		else
-			if positions[0].GetRelationshipRank(positions[1]) == 1 || positions[0].GetRelationshipRank(positions[1]) == 4
-				while tagid < Animations.length && idx < 100
-					if Animations[tagid].HasTag("Loving")
-						_aniTagIds[idx] = tagid
-						idx +=1
-					endIf
-					tagid += 1
-				endWhile
-			else 
-				while tagid < Animations.length && idx < 100
-					if Animations[tagid].HasTag("Prostitute")
-						_aniTagIds[idx] = tagid
-						idx +=1
-					endIf
-					tagid += 1
-				endWhile
-			endif
-		endif
-		if idx > 0			
-			int[] _aniLevelTagIds = new int[100]
-			int idxLevel = 0
-			tagid = 0
-
-			if stats.sexCount(ActorAlias[0].actorRef) < 2
-				while tagid < idx
-					if Animations[_aniTagIds[tagid]].HasTag("Basic")
-						_aniLevelTagIds[idxLevel] = _aniTagIds[tagid]
-						idxLevel +=1
-					endIf
-					tagid += 1
-				endWhile
-			else 
-				while tagid < idx
-					if Animations[_aniTagIds[tagid]].HasTag("Apprentice") || Animations[_aniTagIds[tagid]].HasTag("Basic")
-						_aniLevelTagIds[idxLevel] = _aniTagIds[tagid]
-						idxLevel +=1
-					endIf
-					tagid += 1
-				endWhile
-			endif
-
-			if idxLevel > 0
-				SetAnimation(_aniLevelTagIds[Utility.RandomInt(0, idxLevel - 1)])
-			else 
-				SetAnimation(_aniTagIds[Utility.RandomInt(0, idx - 1)])
-			endif		
-
-			SetAnimation(_aniTagIds[Utility.RandomInt(0, idx - 1)])
-		else 				
-			log("eligible animation not found")
-			SetAnimation()							
-		endif 
+		selectAniamtion()
 
 		int actorIdx = 0
 		while actorIdx < actorCount
-			ActorAlias[actorIdx].onStopLeadInAnimation()
+			ActorAlias[actorIdx].onEndLeadInAnimation()
 			actorIdx += 1
 		endWhile
 
@@ -1086,7 +992,80 @@ function EndLeadIn()
 	endIf
 endFunction
 
+function selectAniamtion()
+		; leadin 이 종료된 후, 바로 이어지는 animation 의 경우
+		int[] _aniTagIds = new int[100]
+		int tagid = 0
+		int idx = 0
+	
+		if Victims.length > 0
+			while tagid < Animations.length && idx < 100
+				if Animations[tagid].HasTag("Aggressive") || Animations[tagid].HasTag("Rape")
+					_aniTagIds[idx] = tagid
+					idx +=1
+				endIf
+				tagid += 1
+			endWhile			
+		else
+			if positions[0].GetRelationshipRank(positions[1]) == 4
+				while tagid < Animations.length && idx < 100
+					if Animations[tagid].HasTag("Loving")
+						_aniTagIds[idx] = tagid
+						idx +=1
+					endIf
+					tagid += 1
+				endWhile
+			else 
+				while tagid < Animations.length && idx < 100
+					if Animations[tagid].HasTag("Prostitute") || Animations[tagid].HasTag("Default")
+						_aniTagIds[idx] = tagid
+						idx +=1
+					endIf
+					tagid += 1
+				endWhile
+			endif
+		endif
+		if idx > 0
+			SetAnimation(_aniTagIds[Utility.RandomInt(0, idx - 1)])			
+			; if leadIn == false
+			; 	int[] _aniLevelTagIds = new int[100]
+			; 	int idxLevel = 0
+			; 	tagid = 0
+
+			; 	if stats.sexCount(ActorAlias[0].actorRef) < 3
+			; 		while tagid < idx
+			; 			if Animations[_aniTagIds[tagid]].HasTag("Basic")
+			; 				_aniLevelTagIds[idxLevel] = _aniTagIds[tagid]
+			; 				idxLevel +=1
+			; 			endIf
+			; 			tagid += 1
+			; 		endWhile
+			; 	else 
+			; 		while tagid < idx
+			; 			if Animations[_aniTagIds[tagid]].HasTag("Apprentice") || Animations[_aniTagIds[tagid]].HasTag("Basic")
+			; 				_aniLevelTagIds[idxLevel] = _aniTagIds[tagid]
+			; 				idxLevel +=1
+			; 			endIf
+			; 			tagid += 1
+			; 		endWhile
+			; 	endif
+
+			; 	if idxLevel > 0
+			; 		SetAnimation(_aniLevelTagIds[Utility.RandomInt(0, idxLevel - 1)])
+			; 	else 
+			; 		SetAnimation(_aniTagIds[Utility.RandomInt(0, idx - 1)])
+			; 	endif	
+			; else 
+				
+			; endif
+		else 				
+			log("eligible animation not found")
+			SetAnimation()							
+		endif 
+endFunction
+
 function EndAnimation(bool Quickly = false)
+	log("EndAnimation")
 	UnregisterForUpdate()
 	Stage   = StageCount
 	FastEnd = Quickly
@@ -1131,9 +1110,9 @@ state Ending
 			Utility.wait(0.1)
 		endWhile	
 
-		bool setBadRelation = false		
+		bool hasBadRelationship = false		
 		if HasPlayer && ActorCount > 1 && Victims.length > 0
-			setBadRelation = true
+			hasBadRelationship = true
 		endif 
 
 		actorIdx = 0
@@ -1141,7 +1120,7 @@ state Ending
 			ActorAlias[actorIdx].kResetActor = false
 
 			; 관계 설정			
-			if setBadRelation
+			if hasBadRelationship
 				if positions[actorIdx] != PlayerRef	&& Utility.RandomInt(1, 10) > 5		
 					int relationShipWithPlayer = PlayerRef.GetRelationshipRank(positions[actorIdx])
 					relationShipWithPlayer -= 4
@@ -1153,9 +1132,9 @@ state Ending
 						positions[actorIdx].AddToFaction(sfxBanditFaction)
 					endif
 				endif 
-			else 
-				int relationShipWithPlayer = PlayerRef.GetRelationshipRank(positions[actorIdx])
-				if positions[actorIdx] != PlayerRef	&& Utility.RandomInt(1, 10) > 5
+			else
+				if positions[actorIdx] != PlayerRef	;&& Utility.RandomInt(1, 10) > 5
+					int relationShipWithPlayer = PlayerRef.GetRelationshipRank(positions[actorIdx])
 					relationShipWithPlayer += 1
 					positions[actorIdx].SetRelationshipRank(Game.GetPlayer(), relationShipWithPlayer)
 					log("change relationship with player " + relationShipWithPlayer)
@@ -1173,6 +1152,7 @@ state Ending
 	endEvent
 
 	function ResetDone()
+		log("ResetDone")
 		UnregisterforUpdate()
 		HookAnimationEnd()
 		SendThreadEvent("AnimationEnd")
@@ -1331,69 +1311,69 @@ endFunction
 ; --- Thread Events - Alton.jung	                  --- ;
 ; ------------------------------------------------------- ;
 
-String function getVoiceType(actor _actor)
-	String vType = "Player"
+; String function getVoiceType(actor _actor)
+; 	String vType = "Player"
 
-	int Gender     = ActorLib.GetGender(_actor)
-	bool IsCreature = Gender >= 2
-	bool IsPlayer   = _actor == PlayerRef
+; 	int Gender     = ActorLib.GetGender(_actor)
+; 	bool IsCreature = Gender >= 2
+; 	bool IsPlayer   = _actor == PlayerRef
 
-	if isCreature 
+; 	if isCreature 
 
-	else 
-		ActorBase actBase = _actor.GetBaseObject() as ActorBase    
-		VoiceType actVoiceType = actBase.GetVoiceType()
-		int formId= actVoiceType.GetFormID()
+; 	else 
+; 		ActorBase actBase = _actor.GetBaseObject() as ActorBase    
+; 		VoiceType actVoiceType = actBase.GetVoiceType()
+; 		int formId= actVoiceType.GetFormID()
 
-		; female   
-		if _actor.GetActorBase().getSex() == 1 
-			; if IsPlayer
-			; 	vType = "Player"
+; 		; female   
+; 		if _actor.GetActorBase().getSex() == 1 
+; 			; if IsPlayer
+; 			; 	vType = "Player"
 
-			; elseif formId == 0x13AE9
-			; 	vType = "Teen"
+; 			; elseif formId == 0x13AE9
+; 			; 	vType = "Teen"
 	
-			; elseif formId == 0x13ADC
-			; 	vType = "Young"
+; 			; elseif formId == 0x13ADC
+; 			; 	vType = "Young"
 				
-			; elseif formId == 0x13AE5
-			; 	vType = "Coward"
+; 			; elseif formId == 0x13AE5
+; 			; 	vType = "Coward"
 	
-			; elseif formId == 0x13AE0 || formId == 0x13BC3
-			; 	vType = "Sultry"
+; 			; elseif formId == 0x13AE0 || formId == 0x13BC3
+; 			; 	vType = "Sultry"
 	
-			; elseif formId == 0x13AE4
-			; 	vType = "Confident"     
+; 			; elseif formId == 0x13AE4
+; 			; 	vType = "Confident"     
 							
-			; elseif formId == 0x13ADD
-			; 	vType = "Even"              
+; 			; elseif formId == 0x13ADD
+; 			; 	vType = "Even"              
 	
-			; elseif formId == 0x13AF3 || formId == 0x13Af1 ; elf
-			; 	vType = "Young"
+; 			; elseif formId == 0x13AF3 || formId == 0x13Af1 ; elf
+; 			; 	vType = "Young"
 	
-			; elseif formId == 0x13AE3 || formId == 0x1B560
-			; 	vType = "Solder"
+; 			; elseif formId == 0x13AE3 || formId == 0x1B560
+; 			; 	vType = "Solder"
 						
-			; elseif formId == 0x13AE1 || formId == 0x13AE2 
-			; 	vType = "Old"
+; 			; elseif formId == 0x13AE1 || formId == 0x13AE2 
+; 			; 	vType = "Old"
 	
-			; elseif formId == 0x13AE8 ; orc
-			; 	vType = "Orc"
+; 			; elseif formId == 0x13AE8 ; orc
+; 			; 	vType = "Orc"
 	
-			; elseif formId == 0x13AED ; Khajit
-			; 	vType = "Khajit"
+; 			; elseif formId == 0x13AED ; Khajit
+; 			; 	vType = "Khajit"
 	
-			; elseif formId == 0x13AE9 ; Argonian
-			; 	vType = "Argonian"
-			; endif          
-			vType = "Player"
-		else 
-			; male
-		endif        
+; 			; elseif formId == 0x13AE9 ; Argonian
+; 			; 	vType = "Argonian"
+; 			; endif          
+; 			vType = "Player"
+; 		else 
+; 			; male
+; 		endif        
 	
-	endif 
-	return vType
-endFunction
+; 	endif 
+; 	return vType
+; endFunction
 
 
 ; ------------------------------------------------------- ;

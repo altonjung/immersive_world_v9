@@ -83,6 +83,7 @@ endProperty
 * * @return: sslThreadModel - the full definition of the SexLab Thread that can be used to configure, start, and stop the scene (a.k.a. the SexLab animation)
 */;
 sslThreadModel function NewThread(float TimeOut = 30.0)
+	log("NewThread")
 	; Claim an available thread
 	return ThreadSlots.PickModel(TimeOut)
 endFunction
@@ -101,6 +102,7 @@ endFunction
 * * @return: the tid of the thread that is allocated by the function, useable with GetController(). -1 if something went wrong and the animation will not start.
 */;
 int function StartSex(Actor[] Positions, sslBaseAnimation[] Anims, Actor Victim = none, ObjectReference CenterOn = none, bool AllowBed = true, string Hook = "")
+	log("StartSex")
 	; Claim a thread
 	sslThreadModel Thread = NewThread()
 	if !Thread
@@ -137,6 +139,7 @@ endFunction
 * * @return: the thread instance that is allocated by the function. NONE if something went wrong and the animation will not start.
 */;
 sslThreadController function QuickStart(Actor Actor1, Actor Actor2 = none, Actor Actor3 = none, Actor Actor4 = none, Actor Actor5 = none, Actor Victim = none, string Hook = "", string AnimationTags = "")
+	log("QuickStart")
 	Actor[] Positions = SexLabUtil.MakeActorArray(Actor1, Actor2, Actor3, Actor4, Actor5)
 	sslBaseAnimation[] Anims
 	if AnimationTags != ""
@@ -1031,6 +1034,7 @@ endFunction
 * * @return: sslBaseAnimation[] - An array of animations that fit the provided search arguments.
 */;
 sslBaseAnimation[] function GetAnimationsByType(int ActorCount, int Males = -1, int Females = -1, int StageCount = -1, bool Aggressive = false, bool Sexual = true)
+	log("GetAnimationsByType")
 	return AnimSlots.GetByType(ActorCount, Males, Females, StageCount, Aggressive, Sexual)
 endFunction
 

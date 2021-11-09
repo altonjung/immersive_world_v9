@@ -993,11 +993,10 @@ function AddPositionStage(int Position, string AnimationEvent, float forward = 0
 	_sfxOrgasm[eid + 0] = sfxOrgasm as int
 	eid += kSfxOrgasmEnd
 
-	; Save orgasm effect
+	; Save moan effect
 	String[] _sfxMoanType = sfxMoanTypeArray(Position)
-	_sfxMoanType[mid + 0] = _sfxMoanType
+	_sfxMoanType[mid + 0] = sfxMoanType
 	mid += kSfxMoanTypeEnd
-
 
 	; Save sfx voice
 	String[] _voiceType = sfxVoiceTypeArray(Position)

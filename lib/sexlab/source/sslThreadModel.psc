@@ -324,6 +324,8 @@ state Making
 	endFunction
 
 	sslThreadController function StartThread()
+		log("StartThread")
+		
 		GoToState("Starting")
 		UnregisterForUpdate()
 		int i

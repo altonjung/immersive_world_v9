@@ -363,8 +363,13 @@ state Ready
 		return false
 	endFunction
 
-	function PrepareActor()
+	function PrepareActor()				
 		log("PrepareActor!!!")
+
+		if kPrepareActor
+			return
+		endif
+		
 		; Remove any unwanted combat effects
 		ClearEffects()
 		if IsPlayer
@@ -544,10 +549,10 @@ state Ready
 				endIf
 			endIf
 		endIf
-		LogInfo += "BaseEnjoyment["+BaseEnjoyment+"]"
-		Log(LogInfo)
+	
 		; Play custom starting animation event
 		if StartAnimEvent != ""
+			Log("StartAnimEvent " + StartAnimEvent)
 			Debug.SendAnimationEvent(ActorRef, StartAnimEvent)
 		endIf
 		if StartWait < 0.1
@@ -578,22 +583,38 @@ state Ready
 				; Start wait loop for actor pathing.
 				int StuckCheck  = 0
 				float Failsafe  = Utility.GetCurrentRealTime() + 30.0
-				while Distance > 100.0 && Utility.GetCurrentRealTime() < Failsafe
-					Utility.Wait(1.0)
-					float Previous = Distance
-					Distance = ActorRef.GetDistance(WaitRef)
-					Log("Current Distance From WaitRef["+WaitRef+"]: "+Distance+" // Moved: "+(Previous - Distance))
+				float Previous = Distance
+				while Distance > 50.0 && Utility.GetCurrentRealTime() < Failsafe
+					Utility.Wait(1.0)					
+					Distance = ActorRef.GetDistance(WaitRef)					
+					; Log("Current Distance From WaitRef["+WaitRef+"]: "+Distance+" // Moved: "+(Previous - Distance))
 					; Check if same distance as last time.
 					if Math.Abs(Previous - Distance) < 1.0
 						if StuckCheck > 2 ; Stuck for 2nd time, end loop.
 							Distance = 0.0
 						endIf
 						StuckCheck += 1 ; End loop on next iteration if still stuck.
-						Log("StuckCheck("+StuckCheck+") No progress while waiting for ["+WaitRef+"]")
+						; Log("StuckCheck("+StuckCheck+") No progress while waiting for ["+WaitRef+"]")
 					else
 						StuckCheck -= 1 ; Reset stuckcheck if progress was made.
 					endIf
-				endWhile
+					Previous = Distance
+				endWhile			
+						
+				; 강제가 아닌경우.. 눕방 수행
+				if position == 0 && thread.Victims.length == 0
+					string bedRollAnimation = "IdleBedRollRightEnterStart"
+					if Thread.UsingSingleBed || Thread.UsingDoubleBed
+						bedRollAnimation = "IdleBedRightEnterStart"
+					endif
+		
+					; Thread.positions[0].SetPosition(Thread.positions[0].GetPositionX(), Thread.positions[0].GetPositionY(), Thread.positions[0].GetPositionZ())
+					Debug.SendAnimationEvent(Thread.positions[0], bedRollAnimation) ; alton jung
+					Utility.Wait(3.5)	; alton jung
+					if Thread.UsingSingleBed || Thread.UsingDoubleBed || Thread.UsingBedRoll
+						Debug.SendAnimationEvent(Thread.positions[0], "SP_Welcome_Bed_" + Utility.RandomInt(1,3))
+					endif
+				endif
 
 				ActorRef.ClearLookAt()
 				if CenterRef != ActorRef
@@ -640,11 +661,11 @@ state Prepare
 		; Remove from bard audience if in one
 		Config.CheckBardAudience(ActorRef, true)
 		; Prepare for loop
-		StopAnimating(true)
+		; StopAnimating(true)
 		StartedAt  = Utility.GetCurrentRealTime()
 		LastOrgasm = StartedAt
 		GoToState("Animating")
-		SyncAll(true)		
+		SyncAll(true)
 		; PlayingSA = Animation.Registry
 		if ActorRef.GetActorValue("Paralysis") != 0.0
 			Debug.SendAnimationEvent(ActorRef, "Ragdoll")
@@ -653,7 +674,7 @@ state Prepare
 			ActorRef.SetActorValue("Paralysis", 0.0)
 			Utility.WaitMenuMode(0.2)
 		endIf
-		SendDefaultAnimEvent()
+		; SendDefaultAnimEvent()
 		; If enabled, start Auto TFC for player
 		if IsPlayer && Config.AutoTFC
 			MiscUtil.SetFreeCameraState(true)
@@ -720,7 +741,7 @@ endFunction
 ; ------------------------------------------------------- ;
 
 function StopAnimating(bool Quick = false, string ResetAnim = "IdleForceDefaultState")
-	log("StopAnimating " + resetAnim)
+	log("StopAnimating")
 	if !ActorRef
 		Log(ActorName +"- WARNING: ActorRef if Missing or Invalid", "StopAnimating("+Quick+")")
 		return
@@ -834,6 +855,7 @@ function StopAnimating(bool Quick = false, string ResetAnim = "IdleForceDefaultS
 endFunction
 
 function SendDefaultAnimEvent(bool Exit = False)
+	log("SendDefaultAnimEvent")
 	Debug.SendAnimationEvent(ActorRef, "AnimObjectUnequip")
 	if !IsCreature
 		Debug.SendAnimationEvent(ActorRef, "IdleForceDefaultState")
@@ -1016,8 +1038,7 @@ function RestoreActorDefaults()
 			sslBaseExpression.ClearMFG(ActorRef)
 		endIf
 	endIf
-
-	doMoanScene()
+	
 	; Player specific actions
 	if IsPlayer
 		; Remove player from frostfall exposure exception
@@ -1349,7 +1370,7 @@ function Strip()
 
 	; 크기 설정
 	if isMale 	
-		Debug.SendAnimationEvent(ActorRef, "SOSFastErect")
+		Debug.SendAnimationEvent(ActorRef, "SOSSlowErect")
 		Utility.Wait(0.1)
 		Debug.SendAnimationEvent(ActorRef, "SOSBend" + Schlong)
 	endif
@@ -1736,7 +1757,7 @@ endFunction
 function onMenuModeExit()
 endFunction 
 
-function onStopLeadInAnimation()
+function onEndLeadInAnimation()
 endFunction
 
 function playSfxSound(float onUpdateStartTime, String blockType)
@@ -1745,7 +1766,7 @@ endFunction
 function playSfxMoan(float onUpdateStartTime)	
 endFunction
 
-function onSfxExpression()
+function onUpdateSfxExpression()
 endFunction
 
 function ReadyScene()
@@ -1803,7 +1824,7 @@ state Animating
 		actorVolume = _volume
 	endFunction	
 	
-	function onStopLeadInAnimation()
+	function onEndLeadInAnimation()
 
 		; Neutral expression
 		MfgConsoleFunc.ResetPhonemeModifier(ActorRef) 
@@ -1818,7 +1839,7 @@ state Animating
 		; Debug.SendAnimationEvent(ActorRef, defaultAnimation)
 	endFunction
 	
-	function onSfxExpression()
+	function onUpdateSfxExpression()
 		; play sfxVoice
 		if sfxExpression != ""
 
@@ -1842,23 +1863,10 @@ state Animating
 		Log("ReadyScene!!!")
 	
 		initState()
-		LoadShares()
-		
-		; 보이스는 속성에 따라 보이스 정보 요청
-		if !IsSilent
-			String _actorVoiceStr = ""
-			if IsFemale
-				_actorVoiceStr = "Female_"
-			else 
-				_actorVoiceStr = "Male_"
-			endif
-
-			_actorVoiceStr +=  Thread.getVoiceType(ActorRef)			
-			SetVoice(Config.VoiceSlots.GetByName(_actorVoiceStr), IsForcedSilent)
-		endif
+		LoadShares()	
 
 		if !IsPlayer
-			actorRef.SetUnconscious(true)
+			actorRef.SetUnconscious(true)		
 		endif
 
 		if position == 0 && isFemale 
@@ -1867,7 +1875,16 @@ state Animating
 			elseif Stats.SexCount(ActorRef) > 20
 				Debug.Notification(actorRef.GetActorBase().GetName() + " is hole")
 			endif
-		endif		
+
+			; 보이스는 속성에 따라 보이스 정보 요청
+			if !IsSilent && IsPlayer
+				String _actorVoiceStr = "Female_Player"
+
+				; 현재는 여캐 player만 적용
+				; _actorVoiceStr +=  Thread.getVoiceType(ActorRef)									
+				SetVoice(Config.VoiceSlots.GetByName(_actorVoiceStr), IsForcedSilent)
+			endif			
+		endif
 
 		;팩션 랭크 업데이트
 		; ActorRef.SetFactionRank(Thread.SfxPositionFaction, position)
@@ -2030,7 +2047,7 @@ state Animating
 				Sound.SetInstanceVolume(sfxSoundId, actorVolume)								
 				if Thread.UsingSingleBed || Thread.UsingDoubleBed
 					Sound.SetInstanceVolume(Thread.SfxBedSound.Play(actorRef), actorVolume)
-				endif				
+				endif
 			endif
 		endif
 	endfunction
@@ -2039,11 +2056,11 @@ state Animating
 				
 		; play sfxVoice		
 		if  sfxVoice != ""
-			if actorVolume > 0 && (onUpdateStartTime - sfxMoanOffset) >= 10				
+			if actorVolume > 0 && (onUpdateStartTime - sfxMoanOffset) >= 15				
 				Sound.StopInstance(sfxOrgasmVoiceId)
 				Sound.StopInstance(sfxVoiceId)
 				sfxVoiceId = 0
-				if sfxVoice == "hor1"		; horror
+					if sfxVoice == "hor1"	; horror
 					sfxVoiceId = Voice.GetHorror1Sound().Play(actorRef)
 				elseif sfxVoice == "hor2"	; horror
 					sfxVoiceId = Voice.GetHorror2Sound().Play(actorRef)
@@ -2066,7 +2083,7 @@ state Animating
 				elseif sfxVoice == "hpy2"	; happy
 					sfxVoiceId = Voice.GetHappy2Sound().Play(actorRef)
 				elseif sfxVoice == "hpy3"	; happy
-					sfxVoiceId = Voice.GetHappy3Sound().Play(actorRef)
+					sfxVoiceId = Voice.GetHappy3Sound().Play(actorRef)					
 				elseif sfxVoice == "fel1"	; feel
 					sfxVoiceId = Voice.GetFeel1Sound().Play(actorRef)
 				elseif sfxVoice == "fel2"	; feel
@@ -2075,6 +2092,8 @@ state Animating
 					sfxVoiceId = Voice.GetFeel3Sound().Play(actorRef)
 				elseif sfxVoice == "lick"
 					sfxVoiceId = voice.getLickSound().Play(actorRef)
+				elseif sfxVoice == "moan"	; moan
+					sfxVoiceId = Voice.GetMoanSound().Play(actorRef)					
 				elseif sfxVoice == "suks"	; mouth
 					sfxVoiceId = voice.getSuckSlowSound().Play(actorRef)
 				elseif sfxVoice == "sukf"	; mouth
@@ -2131,7 +2150,6 @@ state Animating
 	endFunction
 
 	function SyncActor()
-		Log("SyncActor!!!")
 		SyncThread()
 		SyncLocation(false)
 
@@ -2139,7 +2157,6 @@ state Animating
 	endFunction
 
 	function SyncAll(bool Force = false)
-		Log("SyncAll!!!")
 		SyncThread()
 		SyncLocation(Force)
 	endFunction
@@ -2165,7 +2182,6 @@ state Animating
 	endFunction
 
 	function SyncLocation(bool Force = false)
-		log("SyncLocation!!!")
 		OffsetCoords(Loc, Center, Offsets)
 		MarkerRef.SetPosition(Loc[0], Loc[1], Loc[2])
 		MarkerRef.SetAngle(Loc[3], Loc[4], Loc[5])
@@ -2272,22 +2288,21 @@ state Animating
 			endIf
 
 			if !IsSilent
-				bool sfxOrgasmEffect = false
-				sfxOrgasmEffect = animation.PositionSfxOrgasmEffect(sfxOrgasmEffect,  Position, Thread.Stage)
+				if !IsVictim
+					bool sfxOrgasmEffect = false
+					sfxOrgasmEffect = animation.PositionSfxOrgasmEffect(sfxOrgasmEffect,  Position, Thread.Stage)	
+					log("sfxOrgasmEffect " +sfxOrgasmEffect)
 
-				log("sfxOrgasmEffect " +sfxOrgasmEffect)
-
-				if sfxOrgasmEffect 
-					if !IsVictim
+					if sfxOrgasmEffect
 						Sound.StopInstance(sfxVoiceId)
 						sfxOrgasmVoiceId = voice.GetOrgasmSound().Play(actorRef) ; play orgasm sound for 5 second
 						Sound.SetInstanceVolume(sfxOrgasmVoiceId, actorVolume)	
 						sfxMoanOffset = Utility.GetCurrentRealTime() - 4; play last moan sound after 5 second
+					else
+						; Play SFX/Voice
+						PlayLouder(Voice.GetSound(100, false), ActorRef, Config.VoiceVolume)
+						PlayLouder(OrgasmFX, ActorRef, Config.SFXVolume)
 					endif
-				else
-					; Play SFX/Voice
-					PlayLouder(Voice.GetSound(100, false), ActorRef, Config.VoiceVolume)
-					PlayLouder(OrgasmFX, ActorRef, Config.SFXVolume)
 				endif
 			endif
 		endIf
@@ -2373,6 +2388,9 @@ state Animating
 		; 	Debug.SendAnimationEvent(ActorRef, CurrentAE)
 		; 	PlayingAE = CurrentAE
 		; endIf
+		
+		doMoanScene()
+		addSkillPerk()
 		StopAnimating(Thread.FastEnd, EndAnimEvent)
 
 		UnlockActor()
@@ -2461,56 +2479,59 @@ endFunction
 
 ; 종료 액션
 function doMoanScene()
-
 	log("doMoanScene")
 	string _sfxMoanType = ""
 	_sfxMoanType = animation.PositionSfxMoanType(_sfxMoanType,  Position, Thread.Stage)
 	
-	if _sfxMoanType != ""
+	if isFemale && _sfxMoanType != ""
 		; 애니메이션 종료 후 추가 액션 처리
 		if position == 0
-			if IsFemale
-				Sound.StopInstance(sfxVoiceId)
-				Sound.StopInstance(sfxOrgasmVoiceId)
-				Sound.SetInstanceVolume(Voice.GetMoanSound().Play(actorRef), actorVolume)	
-				int _randomValue = Utility.RandomInt(1, 3)		
-				if _sfxMoanType == "Doggy"
-					Debug.SendAnimationEvent(ActorRef, "Scene_F_AfterFuck_Back_0" + _randomValue)
-				else 
-					Offsets[3] = 180
-					OffsetCoords(Loc, Center, Offsets)
-					ActorRef.SetPosition(Loc[0], Loc[1], Loc[2])
-					ActorRef.SetAngle(Loc[3], Loc[4], Loc[5])
+			Sound.StopInstance(sfxVoiceId)
+			Sound.StopInstance(sfxOrgasmVoiceId)
+			Sound.SetInstanceVolume(Voice.GetMoanSound().Play(actorRef), actorVolume)	
+			int _randomValue = Utility.RandomInt(1, 3)		
 
-					if _sfxMoanType == "Oral"
-						Debug.SendAnimationEvent(ActorRef, "Scene_F_AfterFuck_Blow_0" + _randomValue)				
-					elseif _sfxMoanType == "Cow"
-						Debug.SendAnimationEvent(ActorRef, "Scene_F_AfterFuck_Cow_0" + _randomValue)																					
+			log("orgamsType " + _sfxMoanType)
+
+			if _sfxMoanType == "Doggy"
+				Debug.SendAnimationEvent(ActorRef, "Scene_F_AfterFuck_Back_0" + _randomValue)
+			else 
+				Offsets[3] = 180
+				OffsetCoords(Loc, Center, Offsets)
+				ActorRef.SetPosition(Loc[0], Loc[1], Loc[2])
+				ActorRef.SetAngle(Loc[3], Loc[4], Loc[5])
+
+				if _sfxMoanType == "Oral"
+					Debug.SendAnimationEvent(ActorRef, "Scene_F_AfterFuck_Blow_0" + _randomValue)				
+				elseif _sfxMoanType == "Cow"
+					Debug.SendAnimationEvent(ActorRef, "Scene_F_AfterFuck_Cow_0" + _randomValue)																					
+				else
+					if stats.sexCount(actorRef) == 0
+						Debug.SendAnimationEvent(ActorRef, "Scene_F_Virgin_AfterFuck_0" + _randomValue)
 					else
-						if stats.sexCount(actorRef) == 0
-							Debug.SendAnimationEvent(ActorRef, "Scene_F_Virgin_AfterFuck_0" + _randomValue)
+						if IsVictim
+							_randomValue = Utility.RandomInt(1, 5)
+							Debug.SendAnimationEvent(ActorRef, "Scene_F_Victim_AfterFuck_0" + _randomValue)
 						else
-							if IsVictim
-								_randomValue = Utility.RandomInt(1, 5)
-								Debug.SendAnimationEvent(ActorRef, "Scene_F_Victim_AfterFuck_0" + _randomValue)
+							if _sfxMoanType == "loving"
+								Debug.SendAnimationEvent(ActorRef, "Scene_F_Loving_AfterFuck_0" + _randomValue)
 							else
-								if _sfxMoanType == "loving"
-									Debug.SendAnimationEvent(ActorRef, "Scene_F_Loving_AfterFuck_0" + _randomValue)
-								else
-									Debug.SendAnimationEvent(ActorRef, "Scene_F_Prostitute_AfterFuck_0" + _randomValue)
-								endif
-							endif		
-						endif					
-					endif
+								Debug.SendAnimationEvent(ActorRef, "Scene_F_Prostitute_AfterFuck_0" + _randomValue)
+							endif
+						endif		
+					endif					
 				endif
-				Utility.wait(8.0)
-				Debug.SendAnimationEvent(ActorRef, "SexLabSequenceFemaleExit1")
-				Utility.wait(2.0)
-				Debug.SendAnimationEvent(ActorRef, "IdleForceDefaultState")		
-			endif 
+			endif
+			Utility.wait(13.0)
+			Debug.SendAnimationEvent(ActorRef, "SexLabSequenceFemaleExit1")
 		endif
 	endif
 
+	kEndMoanActor = true
+endFunction
+
+; perk or poison 획득
+function addSkillPerk()
 	; earn skillPoint
 	if IsPlayer		
 		int randomNum = Utility.RandomInt(0,10)
@@ -2528,6 +2549,4 @@ function doMoanScene()
 			Game.AdvanceSkill(_SkillName , 1.0)
 		endif
 	endif	
-
-	kEndMoanActor = true
 endFunction
