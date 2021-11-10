@@ -6,10 +6,6 @@ function LoadVoices()
 	; Female voices
 	RegisterVoice("FemalePlayer")
 	RegisterVoice("FemaleYoung")
-	RegisterVoice("FemaleEvan")
-	RegisterVoice("FemaleElf")
-	RegisterVoice("FemaleQuiet")
-	RegisterVoice("FemaleWild")
 	RegisterVoice("FemaleMature")
 	RegisterVoice("FemaleOrc")
 	; Male voices
@@ -32,6 +28,9 @@ function FemalePlayer(int id)
 	Base.Enjoy1  = Game.GetFormFromFile(0x02001842, "Sexlab_beta9 plus.esp") as Sound
 	Base.Enjoy2  = Game.GetFormFromFile(0x02001843, "Sexlab_beta9 plus.esp") as Sound
 	Base.Enjoy3  = Game.GetFormFromFile(0x02001844, "Sexlab_beta9 plus.esp") as Sound
+	Base.Feel1   = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
+	Base.Feel2   = Game.GetFormFromFile(0x0200539A, "Sexlab_beta9 plus.esp") as Sound
+	Base.Feel3   = Game.GetFormFromFile(0x0200539B, "Sexlab_beta9 plus.esp") as Sound
 	Base.Happy1  = Game.GetFormFromFile(0x02001845, "Sexlab_beta9 plus.esp") as Sound
 	Base.Happy2  = Game.GetFormFromFile(0x02003339, "Sexlab_beta9 plus.esp") as Sound
 	Base.Happy3  = Game.GetFormFromFile(0x0200333A, "Sexlab_beta9 plus.esp") as Sound
@@ -41,9 +40,9 @@ function FemalePlayer(int id)
 	Base.Pain1   = Game.GetFormFromFile(0x02001846, "Sexlab_beta9 plus.esp") as Sound
 	Base.Pain2   = Game.GetFormFromFile(0x02003E08, "Sexlab_beta9 plus.esp") as Sound
 	Base.Pain3   = Game.GetFormFromFile(0x02003E09, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel1   = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel2   = Game.GetFormFromFile(0x0200539A, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel3   = Game.GetFormFromFile(0x0200539B, "Sexlab_beta9 plus.esp") as Sound
+	Base.Hate1   = Game.GetFormFromFile(0x020063C7, "Sexlab_beta9 plus.esp") as Sound
+	Base.Hate2   = Game.GetFormFromFile(0x020063C8, "Sexlab_beta9 plus.esp") as Sound
+	Base.Hate3   = Game.GetFormFromFile(0x020063C9, "Sexlab_beta9 plus.esp") as Sound
 
 	Base.Moan    = Game.GetFormFromFile(0x020038A3, "Sexlab_beta9 plus.esp") as Sound
 	Base.Orgasm  = Game.GetFormFromFile(0x02001847, "Sexlab_beta9 plus.esp") as Sound
@@ -74,6 +73,9 @@ function FemaleYoung(int id)
 	Base.Enjoy1  = Game.GetFormFromFile(0x02001842, "Sexlab_beta9 plus.esp") as Sound
 	Base.Enjoy2  = Game.GetFormFromFile(0x02001843, "Sexlab_beta9 plus.esp") as Sound
 	Base.Enjoy3  = Game.GetFormFromFile(0x02001844, "Sexlab_beta9 plus.esp") as Sound
+	Base.Feel1   = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
+	Base.Feel2   = Game.GetFormFromFile(0x0200539A, "Sexlab_beta9 plus.esp") as Sound
+	Base.Feel3   = Game.GetFormFromFile(0x0200539B, "Sexlab_beta9 plus.esp") as Sound
 	Base.Happy1  = Game.GetFormFromFile(0x02001845, "Sexlab_beta9 plus.esp") as Sound
 	Base.Happy2  = Game.GetFormFromFile(0x02003339, "Sexlab_beta9 plus.esp") as Sound
 	Base.Happy3  = Game.GetFormFromFile(0x0200333A, "Sexlab_beta9 plus.esp") as Sound
@@ -83,9 +85,9 @@ function FemaleYoung(int id)
 	Base.Pain1   = Game.GetFormFromFile(0x02001846, "Sexlab_beta9 plus.esp") as Sound
 	Base.Pain2   = Game.GetFormFromFile(0x02003E08, "Sexlab_beta9 plus.esp") as Sound
 	Base.Pain3   = Game.GetFormFromFile(0x02003E09, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel1    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel2    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel3    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
+	Base.Hate1   = Game.GetFormFromFile(0x020063C7, "Sexlab_beta9 plus.esp") as Sound
+	Base.Hate2   = Game.GetFormFromFile(0x020063C8, "Sexlab_beta9 plus.esp") as Sound
+	Base.Hate3   = Game.GetFormFromFile(0x020063C9, "Sexlab_beta9 plus.esp") as Sound
 
 	Base.Moan    = Game.GetFormFromFile(0x020038A3, "Sexlab_beta9 plus.esp") as Sound
 	Base.Orgasm  = Game.GetFormFromFile(0x02001847, "Sexlab_beta9 plus.esp") as Sound
@@ -103,175 +105,6 @@ function FemaleYoung(int id)
 	Base.Save(id)
 endFunction
 
-
-function FemaleEvan(int id)
-	sslBaseVoice Base = Create(id)
-
-	Base.Name   = "Female_Evan"
-	Base.Gender = Female
-
-	Base.Mild   = Game.GetFormFromFile(0x6754B, "SexLab.esm") as Sound
-	Base.Medium = Game.GetFormFromFile(0x6754A, "SexLab.esm") as Sound
-	Base.Hot    = Game.GetFormFromFile(0x67549, "SexLab.esm") as Sound
-
-	Base.Enjoy1  = Game.GetFormFromFile(0x02001842, "Sexlab_beta9 plus.esp") as Sound
-	Base.Enjoy2  = Game.GetFormFromFile(0x02001843, "Sexlab_beta9 plus.esp") as Sound
-	Base.Enjoy3  = Game.GetFormFromFile(0x02001844, "Sexlab_beta9 plus.esp") as Sound
-	Base.Happy1  = Game.GetFormFromFile(0x02001845, "Sexlab_beta9 plus.esp") as Sound
-	Base.Happy2  = Game.GetFormFromFile(0x02003339, "Sexlab_beta9 plus.esp") as Sound
-	Base.Happy3  = Game.GetFormFromFile(0x0200333A, "Sexlab_beta9 plus.esp") as Sound
-	Base.Horror1 = Game.GetFormFromFile(0x0200333B, "Sexlab_beta9 plus.esp") as Sound
-	Base.Horror2 = Game.GetFormFromFile(0x0200333C, "Sexlab_beta9 plus.esp") as Sound
-	Base.Horror3 = Game.GetFormFromFile(0x0200333D, "Sexlab_beta9 plus.esp") as Sound
-	Base.Pain1   = Game.GetFormFromFile(0x02001846, "Sexlab_beta9 plus.esp") as Sound
-	Base.Pain2   = Game.GetFormFromFile(0x02003E08, "Sexlab_beta9 plus.esp") as Sound
-	Base.Pain3   = Game.GetFormFromFile(0x02003E09, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel1    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel2    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel3    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-
-	Base.Moan    = Game.GetFormFromFile(0x020038A3, "Sexlab_beta9 plus.esp") as Sound
-	Base.Orgasm  = Game.GetFormFromFile(0x02001847, "Sexlab_beta9 plus.esp") as Sound
-
-	Base.Kiss    = Game.GetFormFromFile(0x020012C5, "Sexlab_beta9 plus.esp") as Sound
-	Base.Lick    = Game.GetFormFromFile(0x020012CF, "Sexlab_beta9 plus.esp") as Sound
-	Base.SuckSlow= Game.GetFormFromFile(0x020012D1, "Sexlab_beta9 plus.esp") as Sound
-	Base.SuckFast= Game.GetFormFromFile(0x02004E35, "Sexlab_beta9 plus.esp") as Sound
-	Base.Deep    = Game.GetFormFromFile(0x020012D3, "Sexlab_beta9 plus.esp") as Sound
-
-	Base.Aggressive = none
-
-	Base.SetTags("Female,Evan")
-
-	Base.Save(id)
-endFunction
-
-function FemaleElf(int id)
-	sslBaseVoice Base = Create(id)
-
-	Base.Name   = "Female_Elf"
-	Base.Gender = Female
-
-	Base.Mild   = Game.GetFormFromFile(0x67551, "SexLab.esm") as Sound
-	Base.Medium = Game.GetFormFromFile(0x67550, "SexLab.esm") as Sound
-	Base.Hot    = Game.GetFormFromFile(0x6754F, "SexLab.esm") as Sound
-
-	Base.Enjoy1  = Game.GetFormFromFile(0x02001842, "Sexlab_beta9 plus.esp") as Sound
-	Base.Enjoy2  = Game.GetFormFromFile(0x02001843, "Sexlab_beta9 plus.esp") as Sound
-	Base.Enjoy3  = Game.GetFormFromFile(0x02001844, "Sexlab_beta9 plus.esp") as Sound
-	Base.Happy1  = Game.GetFormFromFile(0x02001845, "Sexlab_beta9 plus.esp") as Sound
-	Base.Happy2  = Game.GetFormFromFile(0x02003339, "Sexlab_beta9 plus.esp") as Sound
-	Base.Happy3  = Game.GetFormFromFile(0x0200333A, "Sexlab_beta9 plus.esp") as Sound
-	Base.Horror1 = Game.GetFormFromFile(0x0200333B, "Sexlab_beta9 plus.esp") as Sound
-	Base.Horror2 = Game.GetFormFromFile(0x0200333C, "Sexlab_beta9 plus.esp") as Sound
-	Base.Horror3 = Game.GetFormFromFile(0x0200333D, "Sexlab_beta9 plus.esp") as Sound
-	Base.Pain1   = Game.GetFormFromFile(0x02001846, "Sexlab_beta9 plus.esp") as Sound
-	Base.Pain2   = Game.GetFormFromFile(0x02003E08, "Sexlab_beta9 plus.esp") as Sound
-	Base.Pain3   = Game.GetFormFromFile(0x02003E09, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel1    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel2    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel3    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-
-	Base.Moan    = Game.GetFormFromFile(0x020038A3, "Sexlab_beta9 plus.esp") as Sound
-	Base.Orgasm  = Game.GetFormFromFile(0x02001847, "Sexlab_beta9 plus.esp") as Sound
-
-	Base.Kiss    = Game.GetFormFromFile(0x020012C5, "Sexlab_beta9 plus.esp") as Sound
-	Base.Lick    = Game.GetFormFromFile(0x020012CF, "Sexlab_beta9 plus.esp") as Sound
-	Base.SuckSlow= Game.GetFormFromFile(0x020012D1, "Sexlab_beta9 plus.esp") as Sound
-	Base.SuckFast= Game.GetFormFromFile(0x02004E35, "Sexlab_beta9 plus.esp") as Sound
-	Base.Deep    = Game.GetFormFromFile(0x020012D3, "Sexlab_beta9 plus.esp") as Sound
-
-	Base.Aggressive = none
-
-	Base.SetTags("Female,Elf")
-
-	Base.Save(id)
-endFunction
-
-function FemaleQuiet(int id)
-	sslBaseVoice Base = Create(id)
-
-	Base.Name   = "Female_Quiet"
-	Base.Gender = Female
-
-	Base.Mild   = Game.GetFormFromFile(0x67554, "SexLab.esm") as Sound
-	Base.Medium = Game.GetFormFromFile(0x67553, "SexLab.esm") as Sound
-	Base.Hot    = Game.GetFormFromFile(0x67552, "SexLab.esm") as Sound
-
-	Base.Enjoy1  = Game.GetFormFromFile(0x02001842, "Sexlab_beta9 plus.esp") as Sound
-	Base.Enjoy2  = Game.GetFormFromFile(0x02001843, "Sexlab_beta9 plus.esp") as Sound
-	Base.Enjoy3  = Game.GetFormFromFile(0x02001844, "Sexlab_beta9 plus.esp") as Sound
-	Base.Happy1  = Game.GetFormFromFile(0x02001845, "Sexlab_beta9 plus.esp") as Sound
-	Base.Happy2  = Game.GetFormFromFile(0x02003339, "Sexlab_beta9 plus.esp") as Sound
-	Base.Happy3  = Game.GetFormFromFile(0x0200333A, "Sexlab_beta9 plus.esp") as Sound
-	Base.Horror1 = Game.GetFormFromFile(0x0200333B, "Sexlab_beta9 plus.esp") as Sound
-	Base.Horror2 = Game.GetFormFromFile(0x0200333C, "Sexlab_beta9 plus.esp") as Sound
-	Base.Horror3 = Game.GetFormFromFile(0x0200333D, "Sexlab_beta9 plus.esp") as Sound
-	Base.Pain1   = Game.GetFormFromFile(0x02001846, "Sexlab_beta9 plus.esp") as Sound
-	Base.Pain2   = Game.GetFormFromFile(0x02003E08, "Sexlab_beta9 plus.esp") as Sound
-	Base.Pain3   = Game.GetFormFromFile(0x02003E09, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel1    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel2    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel3    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-
-	Base.Moan    = Game.GetFormFromFile(0x020038A3, "Sexlab_beta9 plus.esp") as Sound
-	Base.Orgasm  = Game.GetFormFromFile(0x02001847, "Sexlab_beta9 plus.esp") as Sound
-
-	Base.Kiss    = Game.GetFormFromFile(0x020012C5, "Sexlab_beta9 plus.esp") as Sound
-	Base.Lick    = Game.GetFormFromFile(0x020012CF, "Sexlab_beta9 plus.esp") as Sound
-	Base.SuckSlow= Game.GetFormFromFile(0x020012D1, "Sexlab_beta9 plus.esp") as Sound
-	Base.SuckFast= Game.GetFormFromFile(0x02004E35, "Sexlab_beta9 plus.esp") as Sound
-	Base.Deep    = Game.GetFormFromFile(0x020012D3, "Sexlab_beta9 plus.esp") as Sound
-
-	Base.Aggressive = none
-
-	Base.SetTags("Female,Quiet,Timid")
-
-	Base.Save(id)
-endFunction
-
-function FemaleWild(int id)
-	sslBaseVoice Base = Create(id)
-
-	Base.Name   = "Female_Wild"
-	Base.Gender = Female
-
-	Base.Mild   = Game.GetFormFromFile(0x67557, "SexLab.esm") as Sound
-	Base.Medium = Game.GetFormFromFile(0x67556, "SexLab.esm") as Sound
-	Base.Hot    = Game.GetFormFromFile(0x67555, "SexLab.esm") as Sound
-
-	Base.Enjoy1  = Game.GetFormFromFile(0x02001842, "Sexlab_beta9 plus.esp") as Sound
-	Base.Enjoy2  = Game.GetFormFromFile(0x02001843, "Sexlab_beta9 plus.esp") as Sound
-	Base.Enjoy3  = Game.GetFormFromFile(0x02001844, "Sexlab_beta9 plus.esp") as Sound
-	Base.Happy1  = Game.GetFormFromFile(0x02001845, "Sexlab_beta9 plus.esp") as Sound
-	Base.Happy2  = Game.GetFormFromFile(0x02003339, "Sexlab_beta9 plus.esp") as Sound
-	Base.Happy3  = Game.GetFormFromFile(0x0200333A, "Sexlab_beta9 plus.esp") as Sound
-	Base.Horror1 = Game.GetFormFromFile(0x0200333B, "Sexlab_beta9 plus.esp") as Sound
-	Base.Horror2 = Game.GetFormFromFile(0x0200333C, "Sexlab_beta9 plus.esp") as Sound
-	Base.Horror3 = Game.GetFormFromFile(0x0200333D, "Sexlab_beta9 plus.esp") as Sound
-	Base.Pain1   = Game.GetFormFromFile(0x02001846, "Sexlab_beta9 plus.esp") as Sound
-	Base.Pain2   = Game.GetFormFromFile(0x02003E08, "Sexlab_beta9 plus.esp") as Sound
-	Base.Pain3   = Game.GetFormFromFile(0x02003E09, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel1    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel2    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel3    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-
-	Base.Moan    = Game.GetFormFromFile(0x020038A3, "Sexlab_beta9 plus.esp") as Sound
-	Base.Orgasm  = Game.GetFormFromFile(0x02001847, "Sexlab_beta9 plus.esp") as Sound
-
-	Base.Kiss    = Game.GetFormFromFile(0x020012C5, "Sexlab_beta9 plus.esp") as Sound
-	Base.Lick    = Game.GetFormFromFile(0x020012CF, "Sexlab_beta9 plus.esp") as Sound
-	Base.SuckSlow= Game.GetFormFromFile(0x020012D1, "Sexlab_beta9 plus.esp") as Sound
-	Base.SuckFast= Game.GetFormFromFile(0x02004E35, "Sexlab_beta9 plus.esp") as Sound
-	Base.Deep    = Game.GetFormFromFile(0x020012D3, "Sexlab_beta9 plus.esp") as Sound
-
-	Base.Aggressive = none
-
-	Base.SetTags("Female,Wild,Excited,Loud")
-
-	Base.Save(id)
-endFunction
-
 function FemaleMature(int id)
 	sslBaseVoice Base = Create(id)
 
@@ -285,6 +118,9 @@ function FemaleMature(int id)
 	Base.Enjoy1  = Game.GetFormFromFile(0x02001842, "Sexlab_beta9 plus.esp") as Sound
 	Base.Enjoy2  = Game.GetFormFromFile(0x02001843, "Sexlab_beta9 plus.esp") as Sound
 	Base.Enjoy3  = Game.GetFormFromFile(0x02001844, "Sexlab_beta9 plus.esp") as Sound
+	Base.Feel1   = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
+	Base.Feel2   = Game.GetFormFromFile(0x0200539A, "Sexlab_beta9 plus.esp") as Sound
+	Base.Feel3   = Game.GetFormFromFile(0x0200539B, "Sexlab_beta9 plus.esp") as Sound
 	Base.Happy1  = Game.GetFormFromFile(0x02001845, "Sexlab_beta9 plus.esp") as Sound
 	Base.Happy2  = Game.GetFormFromFile(0x02003339, "Sexlab_beta9 plus.esp") as Sound
 	Base.Happy3  = Game.GetFormFromFile(0x0200333A, "Sexlab_beta9 plus.esp") as Sound
@@ -294,9 +130,9 @@ function FemaleMature(int id)
 	Base.Pain1   = Game.GetFormFromFile(0x02001846, "Sexlab_beta9 plus.esp") as Sound
 	Base.Pain2   = Game.GetFormFromFile(0x02003E08, "Sexlab_beta9 plus.esp") as Sound
 	Base.Pain3   = Game.GetFormFromFile(0x02003E09, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel1    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel2    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel3    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
+	Base.Hate1   = Game.GetFormFromFile(0x020063C7, "Sexlab_beta9 plus.esp") as Sound
+	Base.Hate2   = Game.GetFormFromFile(0x020063C8, "Sexlab_beta9 plus.esp") as Sound
+	Base.Hate3   = Game.GetFormFromFile(0x020063C9, "Sexlab_beta9 plus.esp") as Sound
 
 	Base.Moan    = Game.GetFormFromFile(0x020038A3, "Sexlab_beta9 plus.esp") as Sound
 	Base.Orgasm  = Game.GetFormFromFile(0x02001847, "Sexlab_beta9 plus.esp") as Sound
@@ -326,6 +162,9 @@ function FemaleOrc(int id)
 	Base.Enjoy1  = Game.GetFormFromFile(0x02001842, "Sexlab_beta9 plus.esp") as Sound
 	Base.Enjoy2  = Game.GetFormFromFile(0x02001843, "Sexlab_beta9 plus.esp") as Sound
 	Base.Enjoy3  = Game.GetFormFromFile(0x02001844, "Sexlab_beta9 plus.esp") as Sound
+	Base.Feel1   = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
+	Base.Feel2   = Game.GetFormFromFile(0x0200539A, "Sexlab_beta9 plus.esp") as Sound
+	Base.Feel3   = Game.GetFormFromFile(0x0200539B, "Sexlab_beta9 plus.esp") as Sound
 	Base.Happy1  = Game.GetFormFromFile(0x02001845, "Sexlab_beta9 plus.esp") as Sound
 	Base.Happy2  = Game.GetFormFromFile(0x02003339, "Sexlab_beta9 plus.esp") as Sound
 	Base.Happy3  = Game.GetFormFromFile(0x0200333A, "Sexlab_beta9 plus.esp") as Sound
@@ -335,9 +174,9 @@ function FemaleOrc(int id)
 	Base.Pain1   = Game.GetFormFromFile(0x02001846, "Sexlab_beta9 plus.esp") as Sound
 	Base.Pain2   = Game.GetFormFromFile(0x02003E08, "Sexlab_beta9 plus.esp") as Sound
 	Base.Pain3   = Game.GetFormFromFile(0x02003E09, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel1    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel2    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
-	Base.Feel3    = Game.GetFormFromFile(0x020038A2, "Sexlab_beta9 plus.esp") as Sound
+	Base.Hate1   = Game.GetFormFromFile(0x020063C7, "Sexlab_beta9 plus.esp") as Sound
+	Base.Hate2   = Game.GetFormFromFile(0x020063C8, "Sexlab_beta9 plus.esp") as Sound
+	Base.Hate3   = Game.GetFormFromFile(0x020063C9, "Sexlab_beta9 plus.esp") as Sound
 	
 	Base.Moan    = Game.GetFormFromFile(0x020038A3, "Sexlab_beta9 plus.esp") as Sound
 	Base.Orgasm  = Game.GetFormFromFile(0x02001847, "Sexlab_beta9 plus.esp") as Sound
@@ -368,6 +207,9 @@ function MalePlayer(int id)
 	Base.Enjoy1  = none
 	Base.Enjoy2  = none
 	Base.Enjoy3  = none
+	Base.Feel1   = none
+	Base.Feel2   = none
+	Base.Feel3   = none	
 	Base.Happy1  = none
 	Base.Happy2  = none
 	Base.Happy3  = none
@@ -377,9 +219,9 @@ function MalePlayer(int id)
 	Base.Pain1   = none
 	Base.Pain2   = none
 	Base.Pain3   = none
-	Base.Feel1   = none
-	Base.Feel2   = none
-	Base.Feel3   = none
+	Base.Hate1   = none
+	Base.Hate2   = none
+	Base.Hate3   = none
 
 	Base.Moan    = none	
 	Base.Orgasm  = none
@@ -410,6 +252,9 @@ function MaleYoung(int id)
 	Base.Enjoy1  = none
 	Base.Enjoy2  = none
 	Base.Enjoy3  = none
+	Base.Feel1   = none
+	Base.Feel2   = none
+	Base.Feel3   = none	
 	Base.Happy1  = none
 	Base.Happy2  = none
 	Base.Happy3  = none
@@ -419,9 +264,9 @@ function MaleYoung(int id)
 	Base.Pain1   = none
 	Base.Pain2   = none
 	Base.Pain3   = none
-	Base.Feel1   = none
-	Base.Feel2   = none
-	Base.Feel3   = none
+	Base.Hate1   = none
+	Base.Hate2   = none
+	Base.Hate3   = none
 
 	Base.Moan    = none
 	Base.Orgasm  = none
@@ -453,6 +298,9 @@ function MaleMature(int id)
 	Base.Enjoy1  = none
 	Base.Enjoy2  = none
 	Base.Enjoy3  = none
+	Base.Feel1   = none
+	Base.Feel2   = none
+	Base.Feel3   = none	
 	Base.Happy1  = none
 	Base.Happy2  = none
 	Base.Happy3  = none
@@ -462,10 +310,9 @@ function MaleMature(int id)
 	Base.Pain1   = none
 	Base.Pain2   = none
 	Base.Pain3   = none
-	Base.Feel1   = none
-	Base.Feel2   = none
-	Base.Feel3   = none
-
+	Base.Hate1   = none
+	Base.Hate2   = none
+	Base.Hate3   = none
 	Base.Moan    = none
 	Base.Orgasm  = none
 
@@ -496,6 +343,9 @@ function MaleOrc(int id)
 	Base.Enjoy1  = none
 	Base.Enjoy2  = none
 	Base.Enjoy3  = none
+	Base.Feel1   = none
+	Base.Feel2   = none
+	Base.Feel3   = none	
 	Base.Happy1  = none
 	Base.Happy2  = none
 	Base.Happy3  = none
@@ -505,10 +355,9 @@ function MaleOrc(int id)
 	Base.Pain1   = none
 	Base.Pain2   = none
 	Base.Pain3   = none
-	Base.Feel1   = none
-	Base.Feel2   = none
-	Base.Feel3   = none
-
+	Base.Hate1   = none
+	Base.Hate2   = none
+	Base.Hate3   = none
 	Base.Moan    = none	
 	Base.Orgasm  = none
 

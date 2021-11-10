@@ -87,10 +87,18 @@ state Prepare
 		int actorIdx = 0
 		int readyCount = 0
 
-		; 일반신인 경우, 첫번째 액터가 먼저 행위 수행
-		if victims.length == 0 
-			ActorAlias[0].PrepareActor()
-			while ActorAlias[0].kPrepareActor == false
+		; love, prostitute 액션인 경우, player가 아닌 액터가 먼저 행위 수행
+		if ActorCount > 1 && victims.length == 0			
+			int firstActorIdx = 0
+			if ActorCount == 2
+				if  Positions[0] == PlayerRef 
+					firstActorIdx = 1
+				endif
+			endif 
+			
+			ActorAlias[firstActorIdx].welcomeScene = true
+			ActorAlias[firstActorIdx].PrepareActor()
+			while ActorAlias[firstActorIdx].kPrepareActor == false
 				Utility.wait(0.1)
 			endWhile
 
@@ -133,7 +141,7 @@ state Prepare
 			CenterLocation[5] = CenterRef.GetAngleZ()
 		endIf /;
 		; Set starting adjusted actor
-		AdjustPos   = FindSlot(Config.TargetRef)
+		AdjustPos   = FindSlot(Config.TargetRef)		
 		if AdjustPos == -1
 			AdjustPos   = (ActorCount > 1) as int
 			if FindSlot(PlayerRef) >= 0 && Positions[AdjustPos] != PlayerRef

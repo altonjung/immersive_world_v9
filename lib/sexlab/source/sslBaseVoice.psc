@@ -4,6 +4,10 @@ Sound property Mild auto
 Sound property Medium auto
 Sound property Hot auto
 
+Sound property Feel1 auto
+Sound property Feel2 auto
+Sound property Feel3 auto
+
 Sound property Enjoy1 auto
 Sound property Enjoy2 auto
 Sound property Enjoy3 auto
@@ -20,9 +24,9 @@ Sound property Pain1 auto
 Sound property Pain2 auto
 Sound property Pain3 auto
 
-Sound property Feel1 auto
-Sound property Feel2 auto
-Sound property Feel3 auto
+Sound property Hate1 auto
+Sound property Hate2 auto
+Sound property Hate3 auto
 
 Sound property Orgasm auto
 Sound property Moan auto
@@ -34,7 +38,6 @@ Sound property Lick auto
 Sound property SuckSlow auto
 Sound property SuckFast auto
 Sound property Deep auto
-
 
 Topic property LipSync auto hidden
 
@@ -206,6 +209,18 @@ endFunction
 
 Sound function GetPain3Sound()
 	return Pain3
+endFunction
+
+Sound function GetHate1Sound()
+	return Hate1
+endFunction
+
+Sound function GetHate2Sound()
+	return Hate2
+endFunction
+
+Sound function GetHate3Sound()
+	return Hate3
 endFunction
 
 Sound function GetFeel1Sound()
@@ -384,7 +399,11 @@ function Initialize()
 	Enjoy1 = none
 	Enjoy2 = none
 	Enjoy3 = none
-	
+
+	Feel1  = none
+	Feel2  = none
+	Feel3  = none
+
 	Happy1 = none
 	Happy2 = none
 	Happy3 = none
@@ -397,9 +416,9 @@ function Initialize()
 	Pain2 = none
 	Pain3 = none
 
-	Feel1  = none
-	Feel2  = none
-	Feel3  = none
+	Hate1 = none
+	Hate2 = none
+	Hate3 = none
 
 	Orgasm = none
 	Moan  = none

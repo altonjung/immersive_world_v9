@@ -111,6 +111,10 @@ bool property MalePosition hidden
 	endFunction
 endProperty
 
+; alton
+bool  property welcomeScene auto	
+
+
 function RegisterEvents()
 	string e = Thread.Key("")
 	; Quick Events
@@ -602,17 +606,17 @@ state Ready
 				endWhile			
 						
 				; 강제가 아닌경우.. 눕방 수행
-				if position == 0 && thread.Victims.length == 0
+				if welcomeScene
 					string bedRollAnimation = "IdleBedRollRightEnterStart"
 					if Thread.UsingSingleBed || Thread.UsingDoubleBed
 						bedRollAnimation = "IdleBedRightEnterStart"
 					endif
 		
-					; Thread.positions[0].SetPosition(Thread.positions[0].GetPositionX(), Thread.positions[0].GetPositionY(), Thread.positions[0].GetPositionZ())
-					Debug.SendAnimationEvent(Thread.positions[0], bedRollAnimation) ; alton jung
+					ActorRef.SetPosition(WaitRef.GetPositionX(), WaitRef.GetPositionY(),  ActorRef.GetPositionZ())
+					Debug.SendAnimationEvent(ActorRef, bedRollAnimation) ; alton jung
 					Utility.Wait(3.5)	; alton jung
 					if Thread.UsingSingleBed || Thread.UsingDoubleBed || Thread.UsingBedRoll
-						Debug.SendAnimationEvent(Thread.positions[0], "SP_Welcome_Bed_" + Utility.RandomInt(1,3))
+						Debug.SendAnimationEvent(ActorRef, "SP_Welcome_Bed_" + BaseSex + "_" + Utility.RandomInt(1,3))
 					endif
 				endif
 
@@ -971,8 +975,8 @@ function LockActor()
 	endIf
 	MarkerRef.Enable()
 	ActorRef.StopTranslation()
-	MarkerRef.MoveTo(ActorRef)
-	AttachMarker()
+	; MarkerRef.MoveTo(ActorRef)
+	; AttachMarker()
 endFunction
 
 function UnlockActor()
@@ -1282,7 +1286,6 @@ function Strip()
 		return
 	endIf
 
-	log("strip..")
 	; Start stripping animation
 	;if DoUndress
 	;	Debug.SendAnimationEvent(ActorRef, "Arrok_Undress_G"+BaseSex)
@@ -1326,7 +1329,7 @@ function Strip()
 			; Start stripping animation
 			if DoUndress && ItemRef == BodyRef ;Body
 				Debug.SendAnimationEvent(ActorRef, "SP_Undress_"+BaseSex)
-				Utility.Wait(1.0)
+				Utility.Wait(4.0)
 				NoUndress = true
 			endIf
 
@@ -1389,7 +1392,18 @@ function UnStrip()
  	if !DoRedress
  		return ; Fuck clothes, bitch.
  	endIf
- 	; Equip Stripped
+
+	if DoUndress && Equipment.Length > 2
+		Debug.SendAnimationEvent(ActorRef, "SP_Dress_"+BaseSex)
+		float dressTime = 14.0
+		if BaseSex == 0
+			dressTime = 12.0			
+		endif
+		Utility.Wait(dressTime)
+		NoUndress = true
+	endIf
+ 	
+	; Equip Stripped
  	int i = Equipment.Length
  	while i
  		i -= 1
@@ -1401,6 +1415,7 @@ function UnStrip()
 	 		ActorRef.EquipItemEx(Equipment[i], hand, false)
   		endIf
  	endWhile
+	 
 endFunction
 
 bool NoRagdoll
@@ -1938,6 +1953,13 @@ state Animating
 		sfxMoanOffset = RunStageTime - 11
 		sfxExpressionOffset = RunStageTime - 4
 
+		; 크기 설정
+		if isMale 	
+			Debug.SendAnimationEvent(ActorRef, "SOSFastErect")
+			Utility.Wait(0.1)
+			Debug.SendAnimationEvent(ActorRef, "SOSBend" + Schlong)
+		endif
+
 		if position == 0
 			Debug.Notification("### Animation " + animation.name + ", Stage " + Thread.Stage + ", expression " + sfxExpression + ", actions " + sfxAction)
 			log("### Animation " + animation.name + ", Stage " + Thread.Stage + ", expression " + sfxExpression + ", actions " + actions.length + ", sfxVoice "+ sfxVoice + ", actorVolume " + actorVolume + ", bed " + Thread.UsingBed)
@@ -2072,6 +2094,12 @@ state Animating
 					sfxVoiceId = Voice.GetPain2Sound().Play(actorRef)
 				elseif sfxVoice == "pan3"	; pain
 					sfxVoiceId = Voice.GetPain3Sound().Play(actorRef)
+				elseif sfxVoice == "hat1"	; hate
+					sfxVoiceId = Voice.GetHate1Sound().Play(actorRef)
+				elseif sfxVoice == "hat2"	; hate
+					sfxVoiceId = Voice.GetHate2Sound().Play(actorRef)
+				elseif sfxVoice == "hat3"	; hate
+					sfxVoiceId = Voice.GetHate3Sound().Play(actorRef)
 				elseif sfxVoice == "ejy1"	; enjoy
 					sfxVoiceId = Voice.GetEnjoy1Sound().Play(actorRef)
 				elseif sfxVoice == "ejy2"	; enjoy
@@ -2141,12 +2169,6 @@ state Animating
 		if !IsCreature
 			ResolveStrapon()		
 		endIf
-		; 크기 설정
-		if isMale 	
-			Debug.SendAnimationEvent(ActorRef, "SOSFastErect")
-			Utility.Wait(0.1)
-			Debug.SendAnimationEvent(ActorRef, "SOSBend" + Schlong)
-		endif
 	endFunction
 
 	function SyncActor()
