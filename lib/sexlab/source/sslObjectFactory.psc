@@ -658,37 +658,38 @@ sslBaseAnimation function CopyAnimation(sslBaseAnimation Copy, sslBaseAnimation 
 endFunction
 
 sslBaseVoice function CopyVoice(sslBaseVoice Copy, sslBaseVoice Orig)
-	Copy.Name    = Orig.Name
-	Copy.Gender  = Orig.Gender
-	Copy.Enjoy1  = Orig.Enjoy1
-	Copy.Enjoy2  = Orig.Enjoy2
-	Copy.Enjoy3  = Orig.Enjoy3
-	Copy.Happy1  = Orig.Happy1
-	Copy.Happy2  = Orig.Happy2
-	Copy.Happy3  = Orig.Happy3
-	Copy.Horror1 = Orig.Horror1
-	Copy.Horror2 = Orig.Horror2
-	Copy.Horror3 = Orig.Horror3
-	Copy.Pain1   = Orig.Pain1
-	Copy.Pain2   = Orig.Pain2
-	Copy.Pain3   = Orig.Pain3
+	Copy.Name     = Orig.Name
+	Copy.Gender   = Orig.Gender
+	Copy.Enjoy1   = Orig.Enjoy1
+	Copy.Enjoy2   = Orig.Enjoy2
+	Copy.Enjoy3   = Orig.Enjoy3
+	Copy.Happy1   = Orig.Happy1
+	Copy.Happy2   = Orig.Happy2
+	Copy.Happy3   = Orig.Happy3
+	Copy.Horror1  = Orig.Horror1
+	Copy.Horror2  = Orig.Horror2
+	Copy.Horror3  = Orig.Horror3
+	Copy.Pain1    =  Orig.Pain1
+	Copy.Pain2    = Orig.Pain2
+	Copy.Pain3    = Orig.Pain3
 	Copy.Feel1    = Orig.Feel1
 	Copy.Feel2    = Orig.Feel2
 	Copy.Feel3    = Orig.Feel3
 	Copy.Hate1    = Orig.Hate1
 	Copy.Hate2    = Orig.Hate2
 	Copy.Hate3    = Orig.Hate3
-	Copy.Moan    = Orig.Moan	
-	Copy.Orgasm  = Orig.Orgasm
-	Copy.Aggressive = Orig.Aggressive
-	Copy.Kiss    = Orig.Kiss
-	Copy.Lick    = Orig.Lick
-	Copy.SuckSlow= Orig.SuckSlow
-	Copy.SuckFast= Orig.SuckFast
-	Copy.Deep    = Orig.Deep
-	Copy.Mild    = Orig.Mild
-	Copy.Medium  = Orig.Medium
-	Copy.Hot     = Orig.Hot
+	Copy.Giggle   = Orig.Giggle
+	Copy.Threaten = Orig.Threaten
+	Copy.Moan     = Orig.Moan	
+	Copy.Orgasm   = Orig.Orgasm
+	Copy.Kiss     = Orig.Kiss
+	Copy.Lick     = Orig.Lick
+	Copy.SuckSlow = Orig.SuckSlow
+	Copy.SuckFast = Orig.SuckFast
+	Copy.Deep     = Orig.Deep
+	Copy.Mild     = Orig.Mild
+	Copy.Medium   = Orig.Medium
+	Copy.Hot      = Orig.Hot
 	Copy.AddTags(Orig.GetTags())
 	return Copy
 endFunction

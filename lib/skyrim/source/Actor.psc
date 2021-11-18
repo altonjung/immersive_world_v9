@@ -983,7 +983,7 @@ Event OnObjectUnequipped(Form akBaseObject, ObjectReference akReference)
 EndEvent
 
 ; Alton
-ImmersiveBreakArmor breakArmor = None
+ImmersiveArmor breakArmor = None
 int hitCount = 0
 int biteCount = 0
 int burnCount = 0
@@ -1024,11 +1024,8 @@ Event OnHit(ObjectReference akAggressor, Form akSource, Projectile akProjectile,
 			elseif aggressor.HasKeyWordString("ActorTypeCreature")
 				biteCount += 1
 
-				if 5 < biteCount 
+				if 10 < biteCount 
 					breakArmor.handleArmorBurn(self, aggressor, akSource)
-					biteCount = biteCount / 2
-				elseif 15 < biteCount
-					breakArmor.handleArmorBroken(self, aggressor, akSource)
 					biteCount = biteCount / 2
 				endif
 			elseif  checkFireSpell(akSource)
@@ -1066,17 +1063,17 @@ bool function checkFireSpell(form _akSource)
 	return false
 endfunction
 
-state playerFemaleRole
+state playerFemaleRole	
 	Event OnObjectEquipped(Form akBaseObject, ObjectReference akReference)
 		Armor _armor = akBaseObject as armor
 		if _armor.IsClothingBody()
 			self.RemoveFromFaction(breakArmor.getBanditFriendFaction())
 			self.RemoveFromFaction(breakArmor.getCreatureFriendFaction())
 			if _armor.HasKeywordString("BanditClothing")
-				Debug.Notification("you wore bandit's! bandit thinks you as slave or bandit")
+				Debug.Notification("you treated as bandit")
 				self.AddToFaction(breakArmor.getBanditFriendFaction())
 			elseif _armor.HasKeywordString("CreatureClothing")
-				Debug.Notification("you wore animals's! animal thinks you as animal")
+				Debug.Notification("you treated as animal")
 				self.AddToFaction(breakArmor.getCreatureFriendFaction())
 			endif							
 		endif		
@@ -1085,12 +1082,16 @@ state playerFemaleRole
 	Event OnObjectUnequipped(Form akBaseObject, ObjectReference akReference)	
 		Armor _armor = akBaseObject as armor
 		if _armor.IsClothingBody()
-			Debug.Notification("you naked! bandit thinks you as slave or bandit")
-			self.AddToFaction(breakArmor.getBanditFriendFaction())
+			Debug.Notification("you naked!.. be careful")
+			if Utility.RandomInt(1, 2) > 1
+				self.AddToFaction(breakArmor.getBanditFriendFaction())
+			else
+				self.AddToFaction(breakArmor.getCreatureFriendFaction())
+			endif
 		endif
 	EndEvent
 endState
 
 function armorBreakModuleInit()
-	breakArmor =  (Game.GetFormFromFile(0x05005900, "AltonArmorBreak.esp") As ImmersiveBreakArmor)
+	breakArmor =  (Game.GetFormFromFile(0x05005900, "AltonArmorBreak.esp") As ImmersiveArmor)
 endfunction

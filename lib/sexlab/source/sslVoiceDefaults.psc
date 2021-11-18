@@ -44,6 +44,9 @@ function FemalePlayer(int id)
 	Base.Hate2   = Game.GetFormFromFile(0x020063C8, "Sexlab_beta9 plus.esp") as Sound
 	Base.Hate3   = Game.GetFormFromFile(0x020063C9, "Sexlab_beta9 plus.esp") as Sound
 
+	Base.Giggle  = Game.GetFormFromFile(0x0200692E, "Sexlab_beta9 plus.esp") as Sound
+	Base.Threaten = Game.GetFormFromFile(0x0200692F, "Sexlab_beta9 plus.esp") as Sound
+	
 	Base.Moan    = Game.GetFormFromFile(0x020038A3, "Sexlab_beta9 plus.esp") as Sound
 	Base.Orgasm  = Game.GetFormFromFile(0x02001847, "Sexlab_beta9 plus.esp") as Sound
 
@@ -52,8 +55,6 @@ function FemalePlayer(int id)
 	Base.SuckSlow= Game.GetFormFromFile(0x020012D1, "Sexlab_beta9 plus.esp") as Sound
 	Base.SuckFast= Game.GetFormFromFile(0x02004E35, "Sexlab_beta9 plus.esp") as Sound
 	Base.Deep    = Game.GetFormFromFile(0x020012D3, "Sexlab_beta9 plus.esp") as Sound
-
-	Base.Aggressive = none
 
 	Base.SetTags("Female,Player")
 
@@ -89,6 +90,9 @@ function FemaleYoung(int id)
 	Base.Hate2   = Game.GetFormFromFile(0x020063C8, "Sexlab_beta9 plus.esp") as Sound
 	Base.Hate3   = Game.GetFormFromFile(0x020063C9, "Sexlab_beta9 plus.esp") as Sound
 
+	Base.Giggle  = Game.GetFormFromFile(0x0200692E, "Sexlab_beta9 plus.esp") as Sound
+	Base.Threaten = Game.GetFormFromFile(0x0200692F, "Sexlab_beta9 plus.esp") as Sound
+
 	Base.Moan    = Game.GetFormFromFile(0x020038A3, "Sexlab_beta9 plus.esp") as Sound
 	Base.Orgasm  = Game.GetFormFromFile(0x02001847, "Sexlab_beta9 plus.esp") as Sound
 
@@ -97,8 +101,6 @@ function FemaleYoung(int id)
 	Base.SuckSlow= Game.GetFormFromFile(0x020012D1, "Sexlab_beta9 plus.esp") as Sound
 	Base.SuckFast= Game.GetFormFromFile(0x02004E35, "Sexlab_beta9 plus.esp") as Sound
 	Base.Deep    = Game.GetFormFromFile(0x020012D3, "Sexlab_beta9 plus.esp") as Sound
-
-	Base.Aggressive = none
 
 	Base.SetTags("Female,Young")
 
@@ -134,6 +136,9 @@ function FemaleMature(int id)
 	Base.Hate2   = Game.GetFormFromFile(0x020063C8, "Sexlab_beta9 plus.esp") as Sound
 	Base.Hate3   = Game.GetFormFromFile(0x020063C9, "Sexlab_beta9 plus.esp") as Sound
 
+	Base.Giggle  = Game.GetFormFromFile(0x0200692E, "Sexlab_beta9 plus.esp") as Sound
+	Base.Threaten = Game.GetFormFromFile(0x0200692F, "Sexlab_beta9 plus.esp") as Sound
+	
 	Base.Moan    = Game.GetFormFromFile(0x020038A3, "Sexlab_beta9 plus.esp") as Sound
 	Base.Orgasm  = Game.GetFormFromFile(0x02001847, "Sexlab_beta9 plus.esp") as Sound
 
@@ -143,7 +148,6 @@ function FemaleMature(int id)
 	Base.SuckFast= Game.GetFormFromFile(0x02004E35, "Sexlab_beta9 plus.esp") as Sound
 	Base.Deep    = Game.GetFormFromFile(0x020012D3, "Sexlab_beta9 plus.esp") as Sound
 
-	Base.Aggressive = none
 	Base.SetTags("Female,Mature")
 
 	Base.Save(id)
@@ -177,6 +181,9 @@ function FemaleOrc(int id)
 	Base.Hate1   = Game.GetFormFromFile(0x020063C7, "Sexlab_beta9 plus.esp") as Sound
 	Base.Hate2   = Game.GetFormFromFile(0x020063C8, "Sexlab_beta9 plus.esp") as Sound
 	Base.Hate3   = Game.GetFormFromFile(0x020063C9, "Sexlab_beta9 plus.esp") as Sound
+
+	Base.Giggle  = Game.GetFormFromFile(0x0200692E, "Sexlab_beta9 plus.esp") as Sound
+	Base.Threaten = Game.GetFormFromFile(0x0200692F, "Sexlab_beta9 plus.esp") as Sound
 	
 	Base.Moan    = Game.GetFormFromFile(0x020038A3, "Sexlab_beta9 plus.esp") as Sound
 	Base.Orgasm  = Game.GetFormFromFile(0x02001847, "Sexlab_beta9 plus.esp") as Sound
@@ -186,8 +193,6 @@ function FemaleOrc(int id)
 	Base.SuckSlow= Game.GetFormFromFile(0x020012D1, "Sexlab_beta9 plus.esp") as Sound
 	Base.SuckFast= Game.GetFormFromFile(0x02004E35, "Sexlab_beta9 plus.esp") as Sound
 	Base.Deep    = Game.GetFormFromFile(0x020012D3, "Sexlab_beta9 plus.esp") as Sound
-
-	Base.Aggressive = none
 
 	Base.SetTags("Female,Orc")
 
@@ -223,6 +228,9 @@ function MalePlayer(int id)
 	Base.Hate2   = none
 	Base.Hate3   = none
 
+	Base.Giggle = none
+	Base.Threaten = none
+
 	Base.Moan    = none	
 	Base.Orgasm  = none
 
@@ -231,8 +239,6 @@ function MalePlayer(int id)
 	Base.SuckSlow= Game.GetFormFromFile(0x020012D1, "Sexlab_beta9 plus.esp") as Sound
 	Base.SuckFast= Game.GetFormFromFile(0x02004E35, "Sexlab_beta9 plus.esp") as Sound
 	Base.Deep    = Game.GetFormFromFile(0x020012D3, "Sexlab_beta9 plus.esp") as Sound
-
-	Base.Aggressive = none
 
 	Base.SetTags("Male,Neutral,Quiet,Normal")
 
@@ -268,6 +274,9 @@ function MaleYoung(int id)
 	Base.Hate2   = none
 	Base.Hate3   = none
 
+	Base.Giggle = none
+	Base.Threaten = none
+
 	Base.Moan    = none
 	Base.Orgasm  = none
 
@@ -276,8 +285,6 @@ function MaleYoung(int id)
 	Base.SuckSlow= Game.GetFormFromFile(0x020012D1, "Sexlab_beta9 plus.esp") as Sound
 	Base.SuckFast= Game.GetFormFromFile(0x02004E35, "Sexlab_beta9 plus.esp") as Sound
 	Base.Deep    = Game.GetFormFromFile(0x020012D3, "Sexlab_beta9 plus.esp") as Sound
-
-	Base.Aggressive = Game.GetFormFromFile(0x0200436F, "Sexlab_beta9 plus.esp") as Sound	
 
 	Base.SetTags("Male,Calm,Quiet")
 
@@ -316,13 +323,14 @@ function MaleMature(int id)
 	Base.Moan    = none
 	Base.Orgasm  = none
 
+	Base.Giggle = none
+	Base.Threaten = none
+
 	Base.Kiss    = Game.GetFormFromFile(0x020012C5, "Sexlab_beta9 plus.esp") as Sound
 	Base.Lick    = Game.GetFormFromFile(0x020012CF, "Sexlab_beta9 plus.esp") as Sound
 	Base.SuckSlow= Game.GetFormFromFile(0x020012D1, "Sexlab_beta9 plus.esp") as Sound
 	Base.SuckFast= Game.GetFormFromFile(0x02004E35, "Sexlab_beta9 plus.esp") as Sound
 	Base.Deep    = Game.GetFormFromFile(0x020012D3, "Sexlab_beta9 plus.esp") as Sound
-
-	Base.Aggressive = Game.GetFormFromFile(0x0200436F, "Sexlab_beta9 plus.esp") as Sound	
 
 	Base.SetTags("Male,Rough,Harsh,Loud,Old")
 
@@ -358,8 +366,11 @@ function MaleOrc(int id)
 	Base.Hate1   = none
 	Base.Hate2   = none
 	Base.Hate3   = none
-	Base.Moan    = none	
+	Base.Moan    = none
 	Base.Orgasm  = none
+
+	Base.Giggle = none
+	Base.Threaten = none
 
 	Base.Kiss    = Game.GetFormFromFile(0x020012C5, "Sexlab_beta9 plus.esp") as Sound
 	Base.Lick    = Game.GetFormFromFile(0x020012CF, "Sexlab_beta9 plus.esp") as Sound
@@ -367,8 +378,6 @@ function MaleOrc(int id)
 	Base.SuckFast= Game.GetFormFromFile(0x02004E35, "Sexlab_beta9 plus.esp") as Sound
 	Base.Deep    = Game.GetFormFromFile(0x020012D3, "Sexlab_beta9 plus.esp") as Sound
 
-	Base.Aggressive = Game.GetFormFromFile(0x0200436F, "Sexlab_beta9 plus.esp") as Sound	
-	
 	Base.SetTags("Male,Average,Normal,Quiet")
 
 	Base.Save(id)

@@ -102,6 +102,11 @@ state Prepare
 				Utility.wait(0.1)
 			endWhile
 
+			; random 으로 옷을 벗음
+			if Utility.RandomInt(0, 10) > 3
+				ActorAlias[firstActorIdx].Strip()
+			endif
+
 			Utility.wait(5.0)
 		endif
 		
@@ -125,6 +130,11 @@ state Prepare
 		while actorIdx < actorCount
 			ActorAlias[actorIdx].kPrepareActor = false
 			actorIdx += 1
+			
+			; random 으로 옷을 벗음
+			if Utility.RandomInt(0, 10) > 5
+				ActorAlias[actorIdx].Strip()
+			endif			
 		endWhile		
 
 		RegisterForSingleUpdate(0.1)

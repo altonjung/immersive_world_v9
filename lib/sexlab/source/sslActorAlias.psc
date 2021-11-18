@@ -586,14 +586,21 @@ state Ready
 				
 				; Start wait loop for actor pathing.
 				int StuckCheck  = 0
-				float Failsafe  = Utility.GetCurrentRealTime() + 30.0
+				float Failsafe  = Utility.GetCurrentRealTime() + 20.0
 				float Previous = Distance
-				while Distance > 50.0 && Utility.GetCurrentRealTime() < Failsafe
-					Utility.Wait(1.0)					
+				float distanceLimit = 20.0
+
+				if Thread.UsingSingleBed || Thread.UsingDoubleBed || Thread.UsingBedRoll
+					distanceLimit = 100.0
+				endif
+
+				while Distance > distanceLimit && Utility.GetCurrentRealTime() < Failsafe
+					Utility.Wait(0.5)					
 					Distance = ActorRef.GetDistance(WaitRef)					
 					; Log("Current Distance From WaitRef["+WaitRef+"]: "+Distance+" // Moved: "+(Previous - Distance))
 					; Check if same distance as last time.
-					if Math.Abs(Previous - Distance) < 1.0
+					; if Math.Abs(Previous - Distance) < 1.0
+					if Previous == Distance
 						if StuckCheck > 2 ; Stuck for 2nd time, end loop.
 							Distance = 0.0
 						endIf
@@ -603,24 +610,32 @@ state Ready
 						StuckCheck -= 1 ; Reset stuckcheck if progress was made.
 					endIf
 					Previous = Distance
-				endWhile			
+				endWhile
 						
 				; 강제가 아닌경우.. 눕방 수행
-				if welcomeScene
-					string bedRollAnimation = "IdleBedRollRightEnterStart"
-					if Thread.UsingSingleBed || Thread.UsingDoubleBed
-						bedRollAnimation = "IdleBedRightEnterStart"
-					endif
-		
-					ActorRef.SetPosition(WaitRef.GetPositionX(), WaitRef.GetPositionY(),  ActorRef.GetPositionZ())
-					Debug.SendAnimationEvent(ActorRef, bedRollAnimation) ; alton jung
-					Utility.Wait(3.5)	; alton jung
+				if Thread.victims.length == 0
 					if Thread.UsingSingleBed || Thread.UsingDoubleBed || Thread.UsingBedRoll
-						Debug.SendAnimationEvent(ActorRef, "SP_Welcome_Bed_" + BaseSex + "_" + Utility.RandomInt(1,3))
+						string bedRollAnimation =  "IdleBedRightEnterStart"					
+						
+						if Thread.UsingBedRoll
+							bedRollAnimation =  "IdleBedRollFrontEnterStart"	
+						endif 
+
+						Debug.SendAnimationEvent(ActorRef, bedRollAnimation) ; alton jung									
+
+						Utility.Wait(3.5)
+						ActorRef.SetVehicle(WaitRef)
+						ActorRef.SetVehicle(ActorRef)
+
+						if welcomeScene
+							Debug.SendAnimationEvent(ActorRef, "SP_Welcome_Bed_" + BaseSex + "_" + Utility.RandomInt(1,5))
+						else 
+							Debug.SendAnimationEvent(ActorRef, "SP_Sleep_Bed")
+						endif						
 					endif
 				endif
-
-				ActorRef.ClearLookAt()
+				
+				; ActorRef.ClearLookAt()
 				if CenterRef != ActorRef
 					ActorRef.SetFactionRank(AnimatingFaction, 1)
 					ActorRef.EvaluatePackage()
@@ -955,7 +970,7 @@ function LockActor()
 			Thread.AutoAdvance = true
 		else
 			Thread.AutoAdvance = Config.AutoAdvance
-			Thread.EnableHotkeys()
+			; Thread.EnableHotkeys()
 		endIf
 	else
 		ActorRef.SetRestrained(true)
@@ -1030,17 +1045,8 @@ function RestoreActorDefaults()
 		if Strapon && !HadStrapon; && Strapon != HadStrapon
 			ActorRef.RemoveItem(Strapon, 1, true)
 		endIf
-		; Reset expression
-		if ActorRef.Is3DLoaded() && !(ActorRef.IsDisabled() || ActorRef.IsDead() || ActorRef.GetActorValue("Health") < 1.0)
-			if Expression
-				sslBaseExpression.CloseMouth(ActorRef)
-			elseIf sslBaseExpression.IsMouthOpen(ActorRef)
-				sslBaseExpression.CloseMouth(ActorRef)			
-			endIf
-			ActorRef.ClearExpressionOverride()
-			ActorRef.ResetExpressionOverrides()
-			sslBaseExpression.ClearMFG(ActorRef)
-		endIf
+
+		clearExpression()
 	endIf
 	
 	; Player specific actions
@@ -1775,13 +1781,13 @@ endFunction
 function onEndLeadInAnimation()
 endFunction
 
+function onUpdateSfxExpression()
+endFunction
+
 function playSfxSound(float onUpdateStartTime, String blockType)
 endFunction
 
 function playSfxMoan(float onUpdateStartTime)	
-endFunction
-
-function onUpdateSfxExpression()
 endFunction
 
 function ReadyScene()
@@ -1862,10 +1868,10 @@ state Animating
 
 			Animation.doSfxEyeExpression(actorRef, position, expressionIdx, sfxExpressionStrength)
 			int baseStart = 0
-			if Thread.Stage < 4
-				baseStart = Thread.Stage * 10
+			if Thread.Stage < 3
+				baseStart = 10
 			else
-				baseStart = 40
+				baseStart = Thread.Stage * 10
 			endif
 
 			Animation.doSfxMouthExpression(actorRef, position, expressionIdx, sfxExpressionStrength, baseStart, OpenMouth)
@@ -2082,7 +2088,12 @@ state Animating
 				Sound.StopInstance(sfxOrgasmVoiceId)
 				Sound.StopInstance(sfxVoiceId)
 				sfxVoiceId = 0
-					if sfxVoice == "hor1"	; horror
+
+				if sfxVoice == "gig"
+					sfxVoiceId = voice.getGiggleSound().Play(actorRef)
+				elseif sfxVoice == "thre"
+					sfxVoiceId = voice.getThreatenSound().Play(actorRef)					
+				elseif sfxVoice == "hor1"	; horror
 					sfxVoiceId = Voice.GetHorror1Sound().Play(actorRef)
 				elseif sfxVoice == "hor2"	; horror
 					sfxVoiceId = Voice.GetHorror2Sound().Play(actorRef)
@@ -2117,7 +2128,7 @@ state Animating
 				elseif sfxVoice == "fel2"	; feel
 					sfxVoiceId = Voice.GetFeel2Sound().Play(actorRef)
 				elseif sfxVoice == "fel3"	; feel
-					sfxVoiceId = Voice.GetFeel3Sound().Play(actorRef)
+					sfxVoiceId = Voice.GetFeel3Sound().Play(actorRef)									
 				elseif sfxVoice == "lick"
 					sfxVoiceId = voice.getLickSound().Play(actorRef)
 				elseif sfxVoice == "moan"	; moan
@@ -2129,9 +2140,7 @@ state Animating
 				elseif sfxVoice == "deep"	; deep mouth
 					sfxVoiceId = voice.getDeepSound().Play(actorRef)
 				elseif sfxVoice == "kiss"
-					sfxVoiceId = Voice.GetKissSound().Play(actorRef)	
-				elseif sfxVoice == "agsv"	; aggressive
-					sfxVoiceId = Voice.GetAggressiveSound().Play(actorRef)
+					sfxVoiceId = Voice.GetKissSound().Play(actorRef)
 				endif
 
 				if sfxVoiceId != 0
@@ -2309,6 +2318,8 @@ state Animating
 				Game.ShakeCamera(none, Config.ShakeStrength, Config.ShakeStrength + 1.0)
 			endIf
 
+			Log("IsSilent " + IsSilent + " , IsVictim " + IsVictim)
+
 			if !IsSilent
 				if !IsVictim
 					bool sfxOrgasmEffect = false
@@ -2411,14 +2422,14 @@ state Animating
 		; 	PlayingAE = CurrentAE
 		; endIf
 		
+		
 		doMoanScene()
+		initSfxState()
 		addSkillPerk()
 		StopAnimating(Thread.FastEnd, EndAnimEvent)
 
 		UnlockActor()
-		RestoreActorDefaults()
-
-		initSfxState()
+		RestoreActorDefaults()		
 		; Tracked events
 		TrackedEvent("End")
 		; Unstrip items in storage, if any
@@ -2481,46 +2492,45 @@ bool function isWornHalfNaked(Actor _actor)
 	endif 
 endfunction
 
-; 표정 선택
-sslBaseExpression function GetExpressionByTag(string Tag, bool ForFemale = true)
+; 표정 초기화
+function clearExpression()
 
-	int i = 8	; expression slot 갯수 총 8개
-	while i
-		bool isFound = false
-		i -= 1
-
-		sslBaseExpression Slot = Config.ExpressionSlots.expressions[i] as sslBaseExpression		
-		isFound = Slot.HasTag(Tag) != -1  && ((ForFemale && Slot.PhasesFemale > 0) || (!ForFemale && Slot.PhasesMale > 0))
-
-		if isFound == true
-			return Slot
-		endif
-	endWhile	
-	return none
+	; Reset expression
+	if ActorRef.Is3DLoaded() && !(ActorRef.IsDisabled() || ActorRef.IsDead() || ActorRef.GetActorValue("Health") < 1.0)
+		sslBaseExpression.CloseMouth(ActorRef)
+		sslBaseExpression.ClearMFG(ActorRef)
+		ActorRef.ClearExpressionOverride()
+		ActorRef.ResetExpressionOverrides()
+	endIf
 endFunction
 
 ; 종료 액션
-function doMoanScene()
-	log("doMoanScene")
+function doMoanScene()	
+
 	string _sfxMoanType = ""
 	_sfxMoanType = animation.PositionSfxMoanType(_sfxMoanType,  Position, Thread.Stage)
 	
+	log("doMoanScene " + _sfxMoanType)
 	if isFemale && _sfxMoanType != ""
 		; 애니메이션 종료 후 추가 액션 처리
 		if position == 0
+			; 포지션 초기화
+			Offsets[0] = 0.0
+			Offsets[1] = 0.0
+			Offsets[2] = 0.0
+			OffsetCoords(Loc, Center, Offsets)
+			ActorRef.SetPosition(Loc[0], Loc[1], Loc[2])
+
 			Sound.StopInstance(sfxVoiceId)
 			Sound.StopInstance(sfxOrgasmVoiceId)
 			Sound.SetInstanceVolume(Voice.GetMoanSound().Play(actorRef), actorVolume)	
-			int _randomValue = Utility.RandomInt(1, 3)		
-
-			log("orgamsType " + _sfxMoanType)
+			int _randomValue = Utility.RandomInt(1, 3)
 
 			if _sfxMoanType == "Doggy"
 				Debug.SendAnimationEvent(ActorRef, "Scene_F_AfterFuck_Back_0" + _randomValue)
 			else 
-				Offsets[3] = 180
+				Offsets[3] = 180.0
 				OffsetCoords(Loc, Center, Offsets)
-				ActorRef.SetPosition(Loc[0], Loc[1], Loc[2])
 				ActorRef.SetAngle(Loc[3], Loc[4], Loc[5])
 
 				if _sfxMoanType == "Oral"
@@ -2528,24 +2538,22 @@ function doMoanScene()
 				elseif _sfxMoanType == "Cow"
 					Debug.SendAnimationEvent(ActorRef, "Scene_F_AfterFuck_Cow_0" + _randomValue)																					
 				else
-					if stats.sexCount(actorRef) == 0
-						Debug.SendAnimationEvent(ActorRef, "Scene_F_Virgin_AfterFuck_0" + _randomValue)
+					if IsVictim
+						_randomValue = Utility.RandomInt(1, 5)
+						Debug.SendAnimationEvent(ActorRef, "Scene_F_Victim_AfterFuck_0" + _randomValue)
 					else
-						if IsVictim
-							_randomValue = Utility.RandomInt(1, 5)
-							Debug.SendAnimationEvent(ActorRef, "Scene_F_Victim_AfterFuck_0" + _randomValue)
+						if _sfxMoanType == "Loving"
+							Debug.SendAnimationEvent(ActorRef, "Scene_F_Loving_AfterFuck_0" + _randomValue)
 						else
-							if _sfxMoanType == "loving"
-								Debug.SendAnimationEvent(ActorRef, "Scene_F_Loving_AfterFuck_0" + _randomValue)
-							else
-								Debug.SendAnimationEvent(ActorRef, "Scene_F_Prostitute_AfterFuck_0" + _randomValue)
-							endif
-						endif		
-					endif					
+							Debug.SendAnimationEvent(ActorRef, "Scene_F_Prostitute_AfterFuck_0" + _randomValue)
+						endif
+					endif
 				endif
 			endif
-			Utility.wait(13.0)
-			Debug.SendAnimationEvent(ActorRef, "SexLabSequenceFemaleExit1")
+			Utility.wait(Utility.RandomFloat(7.0, 15.0))
+			; Debug.SendAnimationEvent(ActorRef, "SexLabSequenceFemaleExit1")
+			Debug.SendAnimationEvent(ActorRef, "IdleBedRollRightExitStart") ; alton jung	
+			Utility.wait(3.5)
 		endif
 	endif
 

@@ -28,10 +28,11 @@ Sound property Hate1 auto
 Sound property Hate2 auto
 Sound property Hate3 auto
 
+Sound property Giggle auto
+Sound property Threaten auto
+
 Sound property Orgasm auto
 Sound property Moan auto
-
-Sound property Aggressive auto
 
 Sound property Kiss auto
 Sound property Lick auto
@@ -235,8 +236,12 @@ Sound function GetFeel3Sound()
 	return Feel3
 endFunction
 
-Sound function GetAggressiveSound()
-	return Aggressive
+Sound function GetGiggleSound()
+	return Giggle
+endFunction
+
+Sound function GetThreatenSound()
+	return Threaten
 endFunction
 
 Sound function GetMoanSound()
@@ -422,8 +427,6 @@ function Initialize()
 
 	Orgasm = none
 	Moan  = none
-
-	Aggressive = none
 	
 	Kiss = none
 	Lick = none

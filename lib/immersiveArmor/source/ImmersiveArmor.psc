@@ -1,4 +1,4 @@
-Scriptname ImmersiveBreakArmor extends Quest
+Scriptname ImmersiveArmor extends Quest
 
 Actor Property Player  Auto
 Faction property banditFriendFaction Auto
@@ -36,6 +36,7 @@ bool function isPlayer(actor _actorRef)
 	endif
 endfunction
 
+; 옷이 타는 경우
 bool function handleArmorBurn(actor _victim, actor _aggressor, form _akSource)
 
 	;화염 데미지라면..
@@ -45,13 +46,13 @@ bool function handleArmorBurn(actor _victim, actor _aggressor, form _akSource)
 	actorArmorList[2]	= _victim.GetWornForm(0x00000010) As Armor	; actorArm					
 	actorArmorList[3] 	= _victim.GetWornForm(0x00200000) as Armor	; actorChest
 	actorArmorList[4]	= _victim.GetWornForm(0x00000004) as Armor	; actorArmor
-	actorArmorList[5] 	= _victim.GetWornForm(0x00400000) as Armor	; actorPanty
-	actorArmorList[6] 	= _victim.GetWornForm(0x00004000) as Armor	; actorFace
+	actorArmorList[5] 	= _victim.GetWornForm(0x00004000) as Armor	; actorFace
+	actorArmorList[6] 	= _victim.GetWornForm(0x00400000) as Armor	; actorPanty
 
 	int idx = 0
 	while idx < actorArmorList.length
 		if actorArmorList[idx] && isBurnableArmor(actorArmorList[idx])
-			Debug.Notification(_victim.GetActorBase().GetName() + " cloth burned")
+			Debug.Notification(_victim.GetActorBase().GetName() + " armor burned")
 			return _handleArmorBurn(_victim, actorArmorList[idx])
 		endif				
 		idx += 1
@@ -60,12 +61,11 @@ bool function handleArmorBurn(actor _victim, actor _aggressor, form _akSource)
 	return false
 endfunction
 
-bool function handleArmorBroken(actor _victim, actor _aggressor, form _akSource)	
+; 옷이 찢어지는 경우 경우
+bool function handleArmorTear(actor _victim, actor _aggressor, form _akSource)	
 
-	Weapon _weapon = _akSource as Weapon
-
-	Armor[] actorArmorList = new Armor[6]
-	; 짐승타입 Npc 공격은 하체 위주 방어구에 영향을 받음			
+	; 짐승타입 Npc 공격은 하체 위주 방어구에 영향을 받음		
+	Armor[] actorArmorList = new Armor[6]	
 	actorArmorList[0]	= _victim.GetWornForm(0x00000008) As Armor	; actorHand
 	actorArmorList[1]	= _victim.GetWornForm(0x00000080) As Armor	; actorFeet
 	actorArmorList[2]	= _victim.GetWornForm(0x00000010) As Armor	; actorArm					
@@ -76,8 +76,8 @@ bool function handleArmorBroken(actor _victim, actor _aggressor, form _akSource)
 	int idx = 0
 	while idx < actorArmorList.length 													
 		if actorArmorList[idx] && isWornableArmor(actorArmorList[idx])
-			Debug.Notification(_victim.GetActorBase().GetName() + " cloth broken")
-			return _handleClothWorn(_victim, actorArmorList[idx])
+			Debug.Notification(_victim.GetActorBase().GetName() + " armor tear")
+			return _handleClothTear(_victim, actorArmorList[idx])
 		endif 							
 		idx += 1
 	endwhile
@@ -85,9 +85,8 @@ bool function handleArmorBroken(actor _victim, actor _aggressor, form _akSource)
 	return false
 endfunction
 
+; 옷이 벗겨져 땅에 떨어지는 경우
 bool function handleArmorDrop(actor _victim, actor _aggressor, form _akSource)	
-
-	Weapon _weapon = _akSource as Weapon
 
 	Armor[] actorArmorList = new Armor[6]
 
@@ -110,7 +109,7 @@ bool function handleArmorDrop(actor _victim, actor _aggressor, form _akSource)
 	return false
 endfunction
 
-bool function _handleClothWorn (Actor _actor, Armor _armor)
+bool function _handleClothTear (Actor _actor, Armor _armor)
 	return _handleArmorRemoved(_actor, _armor)
 endFunction
 
@@ -132,10 +131,11 @@ bool function _handleArmorDropped (Actor _actor, Armor _armor)
 	return true	
 endFunction
 
-bool Function _isMeleeWeapon(Weapon _weapon)
-	return _weapon.IsMace() || _weapon.IsGreatsword() || _weapon.IsWarhammer() || _weapon.IsWarAxe() || _weapon.IsBattleaxe()
-EndFunction 
+; bool Function _isMeleeWeapon(Weapon _weapon)
+; 	return _weapon.IsMace() || _weapon.IsGreatsword() || _weapon.IsWarhammer() || _weapon.IsWarAxe() || _weapon.IsBattleaxe()
+; EndFunction 
 
+; 불에 탈수 있는 옷
 bool function isBurnableArmor(Armor _armor)
 
 	if _armor.GetEnchantment() == none	; 마법옷이라면, burn 되지 않음
@@ -152,6 +152,7 @@ bool function isBurnableArmor(Armor _armor)
 	return false
 endFunction 
 
+; 부서질수 있는 옷
 bool function isWornableArmor(Armor _armor)
 
 	if isBurnableArmor(_armor)

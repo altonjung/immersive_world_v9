@@ -1759,63 +1759,47 @@ endFunction
 function doSfxEyeExpression(Actor _actorRef, int position, int expressionIdx, int strength)
 
 	; 눈썹
-	_actorRef.SetExpressionOverride(expressionIdx, Utility.RandomInt(80, 100))
+	_actorRef.SetExpressionOverride(expressionIdx, Utility.RandomInt(60, 100))
 		
-	strength = strength * 3
-
-	int mok = strength / 50
-	int remain = strength % 50
-	float _strength = 0.0
-	if mok % 2 == 0
-		strength = remain
-	else 
-		strength = 50 - remain
-	endif 
+	strength = strength * 7	
+	strength = strength % 100
 
 	if 	expressionIdx == 9 ; "Fear"	
 
 		strength += 50  	; from 50 to 100
-		_strength = strength / 100.0
+		float _strength = strength / 100.0
 
 		; 왼쪽 눈
-		_actorRef.SetExpressionModifier(12, 0.3)			;squint
 		_actorRef.SetExpressionModifier(0, _strength)		;blink
 		; 오른쪽 눈
-		_actorRef.SetExpressionModifier(13, 0.3)			;squint
-		_actorRef.SetExpressionModifier(1,  0.3)			;blink	
+		_actorRef.SetExpressionModifier(13, 0.3)			;squint	
 	elseif expressionIdx == 10 ; "Happy"
 
 		strength += 30  	; from 30 to 80
-		_strength = strength / 100.0
+		float _strength = strength / 100.0
 
 		; 왼쪽 눈
-		_actorRef.SetExpressionModifier(12, _strength)		;squint
 		_actorRef.SetExpressionModifier(0, _strength)		;blink
 		; 오른쪽 눈
-		_actorRef.SetExpressionModifier(13, _strength)		;squint
 		_actorRef.SetExpressionModifier(1, _strength)		;blink
 	elseif 	expressionIdx == 11 ; "Sad"
 
 		strength += 10  	; from 10 to 60
-		_strength = strength / 100.0
+		float _strength = strength / 100.0
 
 		; 왼쪽 눈
-		_actorRef.SetExpressionModifier(12, 0.3)			;squint
-		_actorRef.SetExpressionModifier(0, _strength)		;blink
+		_actorRef.SetExpressionModifier(4, strength)		;BrwonUpL
 		; 오른쪽 눈
-		_actorRef.SetExpressionModifier(13, 0.3)			;squint
-		_actorRef.SetExpressionModifier(1, _strength)		;blink	
+		_actorRef.SetExpressionModifier(5, strength)		;BrwonUpR	
 	elseif expressionIdx == 12 ; "Surprise"	
 
 		strength += 0  	; from 0 to 50
-		_strength = strength / 100.0
+		float _strength = strength / 100.0
 
 		; 왼쪽 눈
-		_actorRef.SetExpressionModifier(12, 0.3)			;squint
-		_actorRef.SetExpressionModifier(0, 0.5)				;blink
+		_actorRef.SetExpressionModifier(6, strength)		;BrwonUpL
 		; 오른쪽 눈
-		_actorRef.SetExpressionModifier(13, 0.3)			;squint
-		_actorRef.SetExpressionModifier(1, _strength)		;blink		
+		_actorRef.SetExpressionModifier(7, strength)		;BrwonUpR
 	endif
 
 	; if position == 0
@@ -1824,41 +1808,26 @@ function doSfxEyeExpression(Actor _actorRef, int position, int expressionIdx, in
 endFunction 
 
 function doSfxMouthExpression(Actor _actorRef, int position, int expressionIdx, int strength, int baseStart, bool OpenMouth)
-	strength = strength * 5
-	int mok = strength / 80
-	int remain = strength % 80
-	float _strength = 0.0
-	if mok % 2 == 0
-		strength = remain
-	else 
-		strength = 80 - remain
-	endif
+	strength = strength * 4	
+	strength = strength % 100
 
 	; 입 표정
 	if OpenMouth
-		float mouthStrength = Utility.RandomFloat(0.8, 1.0)
-		_actorRef.SetExpressionPhoneme(1, mouthStrength)
-		_actorRef.SetExpressionPhoneme(14, mouthStrength)
+		_actorRef.SetExpressionPhoneme(1, Utility.RandomFloat(0.6, 1.0))
 	else 
 		strength += baseStart
-		_strength = strength / 100.0
+		float _strength = strength / 100.0
 
 		if expressionIdx == 9 ; "Fear"
-			_actorRef.SetExpressionPhoneme(1, _strength)
-			_actorRef.SetExpressionPhoneme(4, _strength)
+			_actorRef.SetExpressionPhoneme(6, _strength)
 		elseif expressionIdx == 10 ; "Happy"
-			_actorRef.SetExpressionPhoneme(13, _strength)
-			; _actorRef.SetExpressionPhoneme(14, _strength)
+			_actorRef.SetExpressionPhoneme(4, _strength)
 		elseif expressionIdx == 11 ; "Sad"
-			_actorRef.SetExpressionPhoneme(1, _strength)
-			; _actorRef.SetExpressionPhoneme(14, _strength)
+			_actorRef.SetExpressionPhoneme(12, _strength)
 		elseif expressionIdx == 12 ; "Surprise"
-			_actorRef.SetExpressionPhoneme(13, _strength)
 			_actorRef.SetExpressionPhoneme(14, _strength)
+		else 
+			_actorRef.SetExpressionPhoneme(0, _strength)
 		endif
 	endif
-
-	; if position == 0
-	; 	log("expressionIdx " + expressionIdx + ", strength " + _strength + ", baseStart " + baseStart)
-	; endif
 endFunction 
