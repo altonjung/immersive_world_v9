@@ -993,9 +993,10 @@ Event OnLoad()
 
 	if !isDead()
 		if breakArmor == None 
-			armorBreakModuleInit()
-			if breakArmor.isPlayer(self) && breakArmor.isActorFemale(self)
-				gotoState("playerFemaleRole")
+			armorBreakModuleInit()			
+			if breakArmor.isPlayer(self)
+				Debug.Notification("active immersiveArmor on player")
+				gotoState("playerRole")
 			endif
 		endif
 	endif
@@ -1063,7 +1064,7 @@ bool function checkFireSpell(form _akSource)
 	return false
 endfunction
 
-state playerFemaleRole	
+state playerRole	
 	Event OnObjectEquipped(Form akBaseObject, ObjectReference akReference)
 		Armor _armor = akBaseObject as armor
 		if _armor.IsClothingBody()
@@ -1075,13 +1076,20 @@ state playerFemaleRole
 			elseif _armor.HasKeywordString("CreatureClothing")
 				Debug.Notification("you treated as animal")
 				self.AddToFaction(breakArmor.getCreatureFriendFaction())
-			endif							
+			endif		
+			UnregisterForUpdate()				
 		endif		
 	EndEvent
 
 	Event OnObjectUnequipped(Form akBaseObject, ObjectReference akReference)	
 		Armor _armor = akBaseObject as armor
 		if _armor.IsClothingBody()
+			RegisterForSingleUpdate(5.0) ; 5초 뒤
+		endif
+	EndEvent
+
+	event OnUpdate()
+		if breakArmor.isWornHalfNakedArmor(self)
 			Debug.Notification("you naked!.. be careful")
 			if Utility.RandomInt(1, 2) > 1
 				self.AddToFaction(breakArmor.getBanditFriendFaction())
@@ -1089,9 +1097,9 @@ state playerFemaleRole
 				self.AddToFaction(breakArmor.getCreatureFriendFaction())
 			endif
 		endif
-	EndEvent
+	endEvent
 endState
 
 function armorBreakModuleInit()
-	breakArmor =  (Game.GetFormFromFile(0x05005900, "AltonArmorBreak.esp") As ImmersiveArmor)
+	breakArmor =  (Game.GetFormFromFile(0x05005900, "ImmersiveArmor.esp") As ImmersiveArmor)
 endfunction
