@@ -1682,42 +1682,63 @@ int function getExpression(Actor _actorRef, string sfxExpression)
 		expressionIdx = 5
 	elseif sfxExpression == "Disgusted"
 		expressionIdx = 6
+	elseif sfxExpression == "Feel"
+		expressionIdx = 8		
 	endif
 	return expressionIdx
 endFunction
 
-function doSfxEyeExpression(Actor _actorRef, int position, int expressionIdx, int strength)
+function doSfxEyeExpression(Actor _actorRef, int position, int expressionIdx, int strength, int powerOfMoan)
 
-	; 눈/눈썹
-	_actorRef.SetExpressionOverride(expressionIdx, Utility.RandomInt(60, 100))
+	; 눈/눈썹		
+	if powerOfMoan > 2
+		strength = 100
+		_actorRef.SetExpressionOverride(expressionIdx, Utility.RandomInt(70, 100))
+	else
+		_actorRef.SetExpressionOverride(expressionIdx, Utility.RandomInt(40, 70))
+		if (strength / 100) % 2 == 1	; 감소
+			strength = 100 - strength % 100
+		else 					; 증감
+			strength = strength % 100
+		endif
+	endif		
+
+	if expressionIdx == 2 ; "Happy"		
+		float _strength = Utility.RandomInt(70, 100) / 100.0
+
+		; Lookup
+		_actorRef.SetExpressionModifier(11, _strength)
+
+		; 왼쪽 눈
+		_actorRef.SetExpressionModifier(0, _strength)		;blink L
+		_actorRef.SetExpressionModifier(12, _strength)		;Squink L
+		; 오른쪽 눈
+		_actorRef.SetExpressionModifier(1, _strength)		;blink R
+		_actorRef.SetExpressionModifier(13, _strength)		;Squink R
+	elseif 	expressionIdx == 3 || expressionIdx == 4 ; "Fear" or "Sad"
+		float _strength = Utility.RandomInt(70, 100) / 100.0
 		
-	strength = strength * 2
-	strength = strength % 100
-
-	if expressionIdx == 2 ; "Happy"
-
-		strength += 30  	; from 30 to 80
-		float _strength = strength / 100.0
-
 		; 왼쪽 눈
 		_actorRef.SetExpressionModifier(0, _strength)		;blink L
 		; 오른쪽 눈
-		_actorRef.SetExpressionModifier(1, _strength)		;blink R
-	elseif 	expressionIdx == 3 ; "Fear"
-
-		strength += 10  	; from 10 to 60
-		float _strength = strength / 100.0
+		_actorRef.SetExpressionModifier(13, _strength)		;Squink R
+	elseif  expressionIdx == 8 ; "Feel"
+		
+		float _strength = Utility.RandomInt(60, 100) / 100.0
 
 		; 왼쪽 눈
-		_actorRef.SetExpressionModifier(0, _strength)		;blink L
+		; _actorRef.SetExpressionModifier(0, _strength)		;blink L
+		_actorRef.SetExpressionModifier(12, _strength)		;Squink L
 		; 오른쪽 눈
-		_actorRef.SetExpressionModifier(1, _strength)		;blink R
+		; _actorRef.SetExpressionModifier(1,_strength)		;blink R
+		_actorRef.SetExpressionModifier(13, _strength)		;Squink R
 	else 
-		strength += 10  	; from 10 to 60
 		float _strength = strength / 100.0
 
 		; 왼쪽 눈
 		_actorRef.SetExpressionModifier(0, _strength)		;blink L
+		; 오른쪽 눈
+		_actorRef.SetExpressionModifier(1, _strength)		;blink R
 	endif
 
 	; if position == 0
@@ -1725,8 +1746,7 @@ function doSfxEyeExpression(Actor _actorRef, int position, int expressionIdx, in
 	; endif
 endFunction 
 
-function doSfxMouthExpression(Actor _actorRef, int position, int expressionIdx, int strength, bool OpenMouth)	
-
+function doSfxMouthExpression(Actor _actorRef, int position, int expressionIdx, int strength, bool OpenMouth, int powerOfMoan)	
 	if (strength / 100) % 2 == 1	; 감소
 		strength = 100 - strength % 100
 	else 					; 증감
@@ -1734,28 +1754,47 @@ function doSfxMouthExpression(Actor _actorRef, int position, int expressionIdx, 
 	endif	
 
 	; 입 표정
-	if OpenMouth
-		_actorRef.SetExpressionPhoneme(1, Utility.RandomFloat(0.5, 8.0))
-		_actorRef.SetExpressionPhoneme(14, Utility.RandomFloat(0.2, 5.0))
+	if  OpenMouth || powerOfMoan > 2
+		if strength < 60
+			strength = 60
+		endif 
+					
+		if strength > 90
+			strength = 90
+		endif 
+	elseif powerOfMoan == 1
+		if strength < 10
+			strength = 10
+		endif 
+
+		if strength > 50
+			strength = 50
+		endif
+	else
+		if strength < 40
+			strength = 40
+		endif 
+					
+		if strength > 70
+			strength = 70
+		endif 
+	endif 
+
+	float _strength = strength / 100.0
+
+	if OpenMouth || powerOfMoan > 2
+		_actorRef.SetExpressionPhoneme(1, _strength)
 	else 
-		float _strength = strength / 100.0
-
-		if _strength > 80
-			_strength = 80
-		endif 
-
-		if _strength < 15
-			_strength = 15
-		endif 
-
 		if expressionIdx == 1 ; "Fear"
 			_actorRef.SetExpressionPhoneme(4, _strength)
 		elseif expressionIdx == 2 ; "Happy"
 			_actorRef.SetExpressionPhoneme(10, _strength)
 		elseif expressionIdx == 4 ; "Surprise"
 			_actorRef.SetExpressionPhoneme(8, _strength)
+		elseif expressionIdx == 8 ; "Feel"
+			_actorRef.SetExpressionPhoneme(14, _strength)			
 		else 
-			_actorRef.SetExpressionPhoneme(14, _strength)
+			_actorRef.SetExpressionPhoneme(0, _strength)
 		endif
 	endif
 endFunction 

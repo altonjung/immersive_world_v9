@@ -112,8 +112,8 @@ bool property MalePosition hidden
 endProperty
 
 ; alton
-bool  property welcomeScene auto	
-
+bool  property bedScene auto
+bool  property groundScene auto
 
 function RegisterEvents()
 	string e = Thread.Key("")
@@ -128,6 +128,11 @@ function RegisterEvents()
 	RegisterForModEvent(e+"Reset", "ResetActor")
 	RegisterForModEvent(e+"Refresh", "RefreshActor")
 	RegisterForModEvent(e+"Startup", "StartAnimating")
+
+	; Stage Events
+	RegisterForModEvent(e+"ReadyScene", "ReadyScene")
+	RegisterForModEvent(e+"PrepareStage", "PrepareStage")
+	RegisterForModEvent(e+"RunStage", "RunStage")
 endFunction
 
 ; ------------------------------------------------------- ;
@@ -140,6 +145,8 @@ bool function SetActor(Actor ProspectRef)
 		Log("ERROR: SetActor("+ProspectRef+") on State:'Ready' is not allowed")
 		return false ; Failed to set prospective actor into alias
 	endIf
+	bedScene = false
+	groundScene = false
 	; Init actor alias information
 	ActorRef   = ProspectRef
 	BaseRef    = ActorRef.GetLeveledActorBase()
@@ -421,36 +428,36 @@ state Ready
 		endIf
 		LockActor()
 		
-		if BedStatus[1] <= 1
-			; pre-move to starting position near other actors
-			Offsets[0] = 0.0
-			Offsets[1] = 0.0
-			Offsets[2] = 5.0
-			Offsets[3] = 0.0
-			; Starting position
-			if Position == 1
-				Offsets[0] = 25.0
-				Offsets[3] = 180.0
+		; if BedStatus[1] <= 1
+		; 	; pre-move to starting position near other actors
+		; 	Offsets[0] = 0.0
+		; 	Offsets[1] = 0.0
+		; 	Offsets[2] = 5.0
+		; 	Offsets[3] = 0.0
+		; 	; Starting position
+		; 	if Position == 1
+		; 		Offsets[0] = 25.0
+		; 		Offsets[3] = 180.0
 
-			elseif Position == 2
-				Offsets[1] = -25.0
-				Offsets[3] = 90.0
+		; 	elseif Position == 2
+		; 		Offsets[1] = -25.0
+		; 		Offsets[3] = 90.0
 
-			elseif Position == 3
-				Offsets[1] = 25.0
-				Offsets[3] = -90.0
+		; 	elseif Position == 3
+		; 		Offsets[1] = 25.0
+		; 		Offsets[3] = -90.0
 
-			elseif Position == 4
-				Offsets[0] = -25.0
+		; 	elseif Position == 4
+		; 		Offsets[0] = -25.0
 
-			endIf
-			OffsetCoords(Loc, Center, Offsets)
-			MarkerRef.SetPosition(Loc[0], Loc[1], Loc[2])
-			MarkerRef.SetAngle(Loc[3], Loc[4], Loc[5])
-			ActorRef.SetPosition(Loc[0], Loc[1], Loc[2])
-			ActorRef.SetAngle(Loc[3], Loc[4], Loc[5])
-			AttachMarker()
-		endIf
+		; 	endIf
+		; 	OffsetCoords(Loc, Center, Offsets)
+		; 	MarkerRef.SetPosition(Loc[0], Loc[1], Loc[2])
+		; 	MarkerRef.SetAngle(Loc[3], Loc[4], Loc[5])
+		; 	ActorRef.SetPosition(Loc[0], Loc[1], Loc[2])
+		; 	ActorRef.SetAngle(Loc[3], Loc[4], Loc[5])
+		; 	AttachMarker()
+		; endIf
 
 		; Player specific actions
 		if IsPlayer
@@ -568,13 +575,20 @@ state Ready
 
 	function PathToCenter()
 		ObjectReference CenterRef = Thread.CenterAlias.GetReference()
-		if CenterRef && ActorRef && (Thread.ActorCount > 1 || CenterRef != ActorRef)
-			ObjectReference WaitRef = CenterRef
-			if CenterRef == ActorRef
-				WaitRef = Thread.Positions[IntIfElse(Position != 0, 0, 1)]
-			endIf
+		ObjectReference WaitRef = CenterRef
+		if WaitRef == ActorRef
+			WaitRef = none
+		endIf
+
+		if CenterRef != ActorRef
 			float Distance = ActorRef.GetDistance(WaitRef)
-			if WaitRef && Distance < 8000.0 && Distance > 135.0
+			float distanceLimit = 15.0
+
+			if bedScene
+				distanceLimit = 120.0
+			endif
+
+			if WaitRef && Distance < 8000.0 && Distance > distanceLimit
 				if CenterRef != ActorRef
 					ActorRef.SetFactionRank(AnimatingFaction, 2)
 					ActorRef.EvaluatePackage()
@@ -588,24 +602,15 @@ state Ready
 				int StuckCheck  = 0
 				float Failsafe  = Utility.GetCurrentRealTime() + 20.0
 				float Previous = Distance
-				float distanceLimit = 20.0
-
-				if Thread.UsingSingleBed || Thread.UsingDoubleBed || Thread.UsingBedRoll
-					distanceLimit = 100.0
-				endif
 
 				while Distance > distanceLimit && Utility.GetCurrentRealTime() < Failsafe
 					Utility.Wait(0.5)					
 					Distance = ActorRef.GetDistance(WaitRef)					
-					; Log("Current Distance From WaitRef["+WaitRef+"]: "+Distance+" // Moved: "+(Previous - Distance))
-					; Check if same distance as last time.
-					; if Math.Abs(Previous - Distance) < 1.0
 					if Previous == Distance
 						if StuckCheck > 2 ; Stuck for 2nd time, end loop.
 							Distance = 0.0
 						endIf
 						StuckCheck += 1 ; End loop on next iteration if still stuck.
-						; Log("StuckCheck("+StuckCheck+") No progress while waiting for ["+WaitRef+"]")
 					else
 						StuckCheck -= 1 ; Reset stuckcheck if progress was made.
 					endIf
@@ -618,35 +623,45 @@ state Ready
 					ActorRef.EvaluatePackage()
 				endIf
 			endIf
-
-			; 강제가 아닌경우.. 눕방 수행
-			if Thread.victims.length == 0
-				if Thread.UsingSingleBed || Thread.UsingDoubleBed || Thread.UsingBedRoll
-
-					strip()						
-					string bedRollAnimation = "IdleBedLeftEnterStart"					
-					
-					if Thread.UsingBedRoll
-						bedRollAnimation = "IdleBedRollFrontEnterStart"
-					endif 
-
-					ActorRef.SetPosition(ActorRef.GetPositionX(), WaitRef.GetPositionY(), ActorRef.GetPositionZ())	; actor를 bed 의 아래쪽 방향에 맞춤
-					Debug.SendAnimationEvent(ActorRef, bedRollAnimation)
-
-					Utility.Wait(4.0)
-
-					; actor를 bed의 중심에 배치
-					ActorRef.SetVehicle(WaitRef)
-					ActorRef.SetVehicle(ActorRef)
-					
-					if welcomeScene
-						Debug.SendAnimationEvent(ActorRef, "SP_Welcome_Bed_" + BaseSex + "_" + Utility.RandomInt(1,3))
-					else 
-						Debug.SendAnimationEvent(ActorRef, "SP_Lay_Bed")
-					endif						
-				endif
-			endif			
 		endIf
+
+		if bedScene
+			strip()
+
+			ActorRef.SetVehicle(WaitRef)
+			ActorRef.SetVehicle(ActorRef)
+			Debug.SendAnimationEvent(ActorRef, "IdleBedRollRightEnterStart")
+						
+			Utility.Wait(4.0)
+			; actor를 bed의 중심에 배치
+			ActorRef.ClearLookAt()
+				
+			string bedPosAnimation = ""
+
+			log("bed Position " + position)
+
+			if position == 0
+				bedPosAnimation = "SP_BPosition_" + Utility.RandomInt(11, 12)
+			else 
+				bedPosAnimation = "SP_BPosition_0" + position
+			endif 
+			Debug.SendAnimationEvent(ActorRef, bedPosAnimation)
+			Utility.Wait(2.0)
+		endif
+
+		if groundScene
+
+			log("ground position " + position)
+			if position == 0
+				Debug.SendAnimationEvent(ActorRef, "IdleBedRollRightEnterStart")
+				Utility.Wait(4.0)
+			else 
+				strip()
+			endif
+
+			Debug.SendAnimationEvent(ActorRef, "SP_GPosition_0" + position)		
+			Utility.Wait(2.0)
+		endif
 	endFunction
 
 endState
@@ -873,13 +888,9 @@ function StopAnimating(bool Quick = false, string ResetAnim = "IdleForceDefaultS
 			Debug.SendAnimationEvent(ActorRef, ResetAnim)
 		endIf
 	endIf
-;	Log(ActorName +"- Angle:[X:"+ActorRef.GetAngleX()+"Y:"+ActorRef.GetAngleY()+"Z:"+ActorRef.GetAngleZ()+"] Position:[X:"+ActorRef.GetPositionX()+"Y:"+ActorRef.GetPositionY()+"Z:"+ActorRef.GetPositionZ()+"]", "StopAnimating("+Quick+")")
-	; PlayingSA = "SexLabSequenceExit1"
-	; PlayingAE = "SexLabSequenceExit1"
 endFunction
 
 function SendDefaultAnimEvent(bool Exit = False)
-	log("SendDefaultAnimEvent")
 	Debug.SendAnimationEvent(ActorRef, "AnimObjectUnequip")
 	if !IsCreature
 		Debug.SendAnimationEvent(ActorRef, "IdleForceDefaultState")
@@ -1036,7 +1047,7 @@ function RestoreActorDefaults()
 			Log(ActorName +"- WARNING: ActorRef if Missing or Invalid", "RestoreActorDefaults()")
 			return ; No actor, reset prematurely or bad call to alias
 		endIf
-	endIf	
+	endIf
 	; Reset to starting scale
 	if UseScale && ActorScale > 0.0 && (ActorScale != 1.0 || AnimScale != 1.0)
 		ActorRef.SetScale(ActorScale)
@@ -1740,12 +1751,11 @@ endfunction
 ; alton added
 bool property kPrepareActor = false auto hidden
 bool property kStartup = false auto hidden
-bool property kSyncActor    = false auto hidden
 bool property kResetActor   = false auto hidden
 bool property kRefreshActor = false auto hidden
-bool property kEndVictimScene = false auto hidden
+bool property kPrepareStage = false auto hidden
 
-int   	 sfxPlayStatus	 ; 0:ready, 1:play, 2:run
+int   	 sfxPlayStatus ; 0: ready, 1: animation play, 2: sound play
 String   sfxActionType
 
 string   sfxSounds
@@ -1759,12 +1769,17 @@ string   sfxSoundType
 string   sfxExpressionType
 int      sfxExpressionTypeStrength 
 float    sfxVoiceOffset
+float    sfxVoiceLimit
+
 float    actorVolume
 
 int 	 sfxSoundId
 int 	 sfxVoiceId
 int      sfxOrgasmVoiceId
 
+int      sfxPowerOfMoan
+
+int      sfxOrgasmStep 
 
 ; ------------------------------------------------------- ;
 ; --- Animation Loop                                  --- ;
@@ -1828,7 +1843,7 @@ state Animating
 
 	function onMenuModeEnter()
 		backupSfxPlayStatus = sfxPlayStatus
-		sfxPlayStatus = 0 ; ready
+		sfxPlayStatus = 0
 		initSfxState()
 		UnregisterForUpdate()
 		StartedAt += 1.2
@@ -1837,7 +1852,7 @@ state Animating
 	function onMenuModeExit()
 		sfxPlayStatus = backupSfxPlayStatus
 		aniPlayTime = 0
-		aniExpectPlayTime = 0		
+		aniExpectPlayTime = 0
 		RegisterForSingleUpdate(0.0)
 	endFunction
 
@@ -1849,15 +1864,6 @@ state Animating
 
 		; Neutral expression
 		MfgConsoleFunc.ResetPhonemeModifier(ActorRef) 
-
-		; String defaultAnimation = ""
-		; if isFemale
-		; 	defaultAnimation = "SexLabSequenceFemaleExit1"
-		; else
-		; 	defaultAnimation = "SexLabSequenceMaleExit1"
-		; endif		
-
-		; Debug.SendAnimationEvent(ActorRef, defaultAnimation)
 	endFunction
 	
 	function onUpdateSfxExpression()
@@ -1865,14 +1871,18 @@ state Animating
 		if sfxExpressionType != ""
 
 			int expressionIdx = Animation.getExpression(actorRef, sfxExpressionType)
+			
+			Animation.doSfxEyeExpression(actorRef, position, expressionIdx, sfxExpressionTypeStrength, sfxPowerOfMoan)
 
-			Animation.doSfxEyeExpression(actorRef, position, expressionIdx, sfxExpressionTypeStrength)
-			Animation.doSfxMouthExpression(actorRef, position, expressionIdx, sfxExpressionTypeStrength, OpenMouth)
+			if expressionIdx < 8
+				Animation.doSfxMouthExpression(actorRef, position, expressionIdx, sfxExpressionTypeStrength, OpenMouth, sfxPowerOfMoan)
+			endif
 			
 			sfxExpressionTypeStrength += utility.randomInt(2,4)
 		endif
 	endfunction
 
+	; 첫 스테이징 시작 처리 (보이스 선택)
 	function ReadyScene()
 		Log("ReadyScene!!!")
 	
@@ -1901,18 +1911,17 @@ state Animating
 		endif
 	endFunction	
 
+	; sfx 액션, 사운드, 보이스 로딩
 	function PrepareStage ()
 		Log("PrepareStage!!!")
 
 		if !ActorRef.Is3DLoaded() || ActorRef.IsDisabled() || ActorRef.IsDead()
 			Thread.EndAnimation(true)
 			return
-		endIf
+		endIf		
 		
 		UnregisterForUpdate()
 		sfxPlayStatus = 0 ; ready
-		
-		initSfxState()
 
 		; SFX 사운드 동기화 정보 요청		
 		sfxActionType = Animation.PositionActionType(sfxActionType,  Position, Thread.Stage)		
@@ -1946,7 +1955,7 @@ state Animating
 		   sfxSoundWaitBlocks = PapyrusUtil.StringSplit(sfxSoundBlocks[sfxSoundBlockIdx], "|")
 		   sfxSoundWaitBlockIdx = 0
 		else 
-			sfxSoundType = none
+			sfxSoundType = ""
 			sfxSoundBlocks = none
 			sfxSoundWaitBlocks = none
 			sfxSoundBlockIdx = 0
@@ -1955,26 +1964,36 @@ state Animating
 				
 		float currentTime =  Utility.GetCurrentRealTime()
 		if Thread.Stage == 1
-			sfxVoiceOffset = currentTime - 13.0	; stage 시작 시 3초 지연주고 시작
+			sfxVoiceOffset = currentTime - 13.0	; stage 시작 시 3초 지연주고 시작			
 		else 
 			sfxVoiceOffset = currentTime - 100	; stage 시작 시 바로 시작
 		endif
+
+		if sfxVoiceType == "gig" || sfxVoiceType == "thre"
+			sfxVoiceLimit = 3
+		else 
+			sfxVoiceLimit = 13
+		endif 
 
 		; 크기 설정
 		raiseSos()
 
 		if position == 0
 			Debug.Notification("### Animation " + animation.name + ", Stage " + Thread.Stage + ", expression " + sfxExpressionType + ", actions " + sfxActionType + ", SoundType " + sfxSoundType + ", VoiceType " + sfxVoiceType)
-			log("### Animation " + animation.name + ", Stage " + Thread.Stage + ", expression " + sfxExpressionType + ", VoiceType "+ sfxVoiceType + ", soundType " + sfxSoundType + ", bed " + Thread.UsingBed)
+			log("### Animation " + animation.name + ", Stage " + Thread.Stage + ", expression " + sfxExpressionType + ", soundType " + sfxSoundType + ", VoiceType " + sfxVoiceType + ", bed " + Thread.UsingBed)
 		endif		
+		kPrepareStage = true
 	endFunction
 
-	function RunStage()
-		Log("RunStage!!!")
-
-		sfxPlayStatus = 1 ; play
-		RegisterForSingleUpdate(0.1)
+	; 애니메이션, 사운드 구동
+	function RunStage()		
+		sfxPlayStatus = 1 ; play animation
+		RegisterForSingleUpdate(0.0)
 	endFunction
+
+	; sfxPlayStatus = 0 ; ready
+	; sfxPlayStatus = 1 ; animation play
+	; sfxPlayStatus = 2 ; sound play	
 
 	event OnUpdate()
 		float currentTime = Utility.GetCurrentRealTime()
@@ -1983,18 +2002,19 @@ state Animating
 		float opTime = 0.0
 		float waitTime  = 0.0
 
-		if sfxPlayStatus == 2 ; run
+		if sfxPlayStatus == 2 ; sound play
 			aniPlayTime = currentTime - aniStartTime
 
-			; Sfx 목소리 플레이
+			; Sfx moan 플레이
 			playSfxVoice(currentTime)
 
 			; soundWaitBlock 종료 여부 확인
 			if sfxSoundType != ""
 				delayTime = aniExpectPlayTime - aniPlayTime
 
-				if delayTime < -1.0 ; skip	
-					RegisterForSingleUpdate(0.0)				
+				if delayTime < -1.0 ; skip
+					aniExpectPlayTime = aniPlayTime
+					RegisterForSingleUpdate(0.0)
 					return
 				endif
 
@@ -2007,44 +2027,54 @@ state Animating
 
 					sfxSoundWaitBlocks = PapyrusUtil.StringSplit(sfxSoundBlocks[sfxSoundBlockIdx], "|")
 					sfxSoundBlockIdx += 1
-				endif			
+				endif
 				
 				waitTime = sfxSoundWaitBlocks[sfxSoundWaitBlockIdx] as float
-				aniExpectPlayTime += waitTime
 				
 				; Sfx Effect 플레이	
-				if sfxSoundWaitBlockIdx == 0
-					; wait
-					updateTime = waitTime
-				else 
+				if sfxSoundWaitBlockIdx == 1
 					playSfxSound(currentTime)
 	
 					; 연산을 통한 지연시간 검사
 					opTime = Utility.GetCurrentRealTime() - currentTime
 					if waitTime >= opTime
-						updateTime = waitTime - opTime			
+						waitTime = waitTime - opTime			
 					endif
-				endif 
+
+					updateTime = waitTime
+				else 
+					updateTime = waitTime
+				endif 				
 	
 				sfxSoundWaitBlockIdx += 1
-				updateTime += delayTime	
+				updateTime += delayTime
+
+				if updateTime < 0.0
+					updateTime = 0.0
+				endif 
+
+				aniExpectPlayTime = aniPlayTime + updateTime
 			else 
 				; support old version
 				updateTime = VoiceDelay * 0.35	
 			endif				
 			; Log("pt: " + aniPlayTime + ", et: " + aniExpectPlayTime + ", dt: " + delayTime + ", wt: " + waitTime)
 		
-		elseif sfxPlayStatus == 1 ; play		
+		elseif sfxPlayStatus == 1 ; animation play				
+			initSfxState()
+
+			SyncActor()
+			Debug.SendAnimationEvent(ActorRef, Animation.FetchPositionStage(Position, Thread.Stage))
+
 			aniStartTime = currentTime
-			String aniName = Animation.FetchPositionStage(Position, Thread.Stage)
-			
-			Debug.SendAnimationEvent(ActorRef, aniName)
-			sfxPlayStatus = 2 ; run
+			aniPlayTime = 0
+			aniExpectPlayTime = 0
+			sfxPlayStatus = 2 ; sound play
 		elseif sfxPlayStatus == 0 ; ready
 			return
 		endif
 
-		if sfxPlayStatus != 0 ; ready
+		if sfxPlayStatus > 0
 			RegisterForSingleUpdate(updateTime)
 		endif	
 	endEvent
@@ -2054,7 +2084,7 @@ state Animating
 		; play sfx sound
 		if actorVolume > 0.0 && sfxSoundType != ""
 
-			log("playSfxSound " + sfxSoundType)	
+			; log("playSfxSound " + sfxSoundType)	
 
 			; 콘솔창같은 환경으로 인해, 시간 지연이 발생하는 경우, sfx 미출력						
 			Sound.StopInstance(sfxSoundId)
@@ -2078,15 +2108,17 @@ state Animating
 	endfunction
 
 	function playSfxVoice(float currentTime)				
+
 		; play sfxVoice
 		if  sfxVoiceType != ""
-			if actorVolume > 0 && (currentTime - sfxVoiceOffset) >= 15
+			if actorVolume > 0 && (currentTime - sfxVoiceOffset) >= sfxVoiceLimit
 
-				log("playSfxVoice " + sfxVoiceType + ", actorVolume" + actorVolume + ", diff " + (currentTime - sfxVoiceOffset))	
-
+				; log("playSfxVoice " + sfxVoiceType + ", IsSilent " + IsSilent + " sfx")
+				
 				Sound.StopInstance(sfxOrgasmVoiceId)
 				Sound.StopInstance(sfxVoiceId)
 
+				sfxPowerOfMoan = 1
 				if sfxVoiceType == "gig"
 					sfxVoiceId = voice.getGiggleSound().Play(actorRef)
 				elseif sfxVoiceType == "thre"
@@ -2113,34 +2145,52 @@ state Animating
 					sfxVoiceId = Voice.GetEnjoy1Sound().Play(actorRef)
 				elseif sfxVoiceType == "ejy2"	; enjoy
 					sfxVoiceId = Voice.GetEnjoy2Sound().Play(actorRef)
+					sfxPowerOfMoan = 2
 				elseif sfxVoiceType == "ejy3"	; enjoy
+					sfxPowerOfMoan = 3
 					sfxVoiceId = Voice.GetEnjoy3Sound().Play(actorRef)
 				elseif sfxVoiceType == "hpy1"	; happy
 					sfxVoiceId = Voice.GetHappy1Sound().Play(actorRef)
 				elseif sfxVoiceType == "hpy2"	; happy
 					sfxVoiceId = Voice.GetHappy2Sound().Play(actorRef)
+					sfxPowerOfMoan = 2
 				elseif sfxVoiceType == "hpy3"	; happy
 					sfxVoiceId = Voice.GetHappy3Sound().Play(actorRef)					
+					sfxPowerOfMoan = 3
 				elseif sfxVoiceType == "fel1"	; feel
 					sfxVoiceId = Voice.GetFeel1Sound().Play(actorRef)
 				elseif sfxVoiceType == "fel2"	; feel
 					sfxVoiceId = Voice.GetFeel2Sound().Play(actorRef)
 				elseif sfxVoiceType == "fel3"	; feel
-					sfxVoiceId = Voice.GetFeel3Sound().Play(actorRef)									
+					sfxVoiceId = Voice.GetFeel3Sound().Play(actorRef)	
+					sfxPowerOfMoan = 3								
 				elseif sfxVoiceType == "lick"
 					sfxVoiceId = voice.getLickSound().Play(actorRef)
 				elseif sfxVoiceType == "moan"	; moan
+					sfxPowerOfMoan = 3
 					sfxVoiceId = Voice.GetMoanSound().Play(actorRef)					
 				elseif sfxVoiceType == "suks"	; mouth
 					sfxVoiceId = voice.getSuckSlowSound().Play(actorRef)
+					sfxPowerOfMoan = 3
 				elseif sfxVoiceType == "sukf"	; mouth
 					sfxVoiceId = voice.getSuckFastSound().Play(actorRef)		
+					sfxPowerOfMoan = 3
 				elseif sfxVoiceType == "deep"	; deep mouth
 					sfxVoiceId = voice.getDeepSound().Play(actorRef)
+					sfxPowerOfMoan = 3
 				elseif sfxVoiceType == "kiss"
 					sfxVoiceId = Voice.GetKissSound().Play(actorRef)
-				elseif sfxVoiceType == "orgasm"
-					sfxVoiceId = Voice.GetOrgasmSound().Play(actorRef)
+				elseif sfxVoiceType == "orgasm"					
+					if sfxOrgasmStep == 0
+						sfxVoiceId = Voice.GetHappy1Sound().Play(actorRef)
+						sfxVoiceLimit = 5
+						sfxPowerOfMoan = 3
+						sfxOrgasmStep = 1
+					else 
+						sfxVoiceId = Voice.GetOrgasmSound().Play(actorRef)
+						sfxVoiceLimit = 100
+						sfxPowerOfMoan = 4
+					endif					
 				else
 					sfxVoiceId = 0
 				endif
@@ -2152,13 +2202,13 @@ state Animating
 			endif
 		else 
 			if !IsSilent && ((currentTime - sfxVoiceOffset) > Utility.RandomInt(3, 5))
-				Sound.StopInstance(sfxVoiceId)
-				sfxVoiceId = 0				
+				; log("playSfxVoice " + sfxVoiceType + ", IsSilent" + IsSilent + " normal")
+				Sound.StopInstance(sfxVoiceId)	
 				sfxVoiceId = Voice.PlayMoan(ActorRef, GetEnjoyment(), isVictim, UseLipSync, actorVolume)
 				if sfxVoiceId != 0					
 					Sound.SetInstanceVolume(sfxVoiceId, actorVolume)
 					sfxVoiceOffset = currentTime
-				endif	
+				endif
 			endif
 		endif 
 	endfunction
@@ -2184,8 +2234,6 @@ state Animating
 	function SyncActor()
 		SyncThread()
 		SyncLocation(false)
-
-		kSyncActor = true
 	endFunction
 
 	function SyncAll(bool Force = false)
@@ -2403,11 +2451,12 @@ state Animating
 			if IsType[8]
 				Stats.AdjustSkill(ActorRef, "OralCount", 1)
 			endIf
-		endIf
-			
+		endIf			
 		playVictimScene()
 		initSfxState()
 		addSkillPerk()
+
+		wakeUpAnimating()
 		StopAnimating(Thread.FastEnd, EndAnimEvent)
 
 		UnlockActor()
@@ -2457,26 +2506,24 @@ function raiseSos (bool slow = false)
 	endif
 endFunction	
 
-
 function initSfxState ()
 	Sound.StopInstance(sfxSoundId)
 	Sound.StopInstance(sfxVoiceId)
 	Sound.StopInstance(sfxOrgasmVoiceId)
-	
+
 	sfxSoundId = 0
 	sfxVoiceId = 0
 	sfxOrgasmVoiceId = 0
 	sfxExpressionTypeStrength = 0
-	aniPlayTime = 0
-	aniExpectPlayTime = 0
+	sfxPowerOfMoan = 0
+	sfxOrgasmStep = 0
 endFunction
 
 function initState ()
 	kPrepareActor = false
 	kResetActor   = false
 	kRefreshActor = false
-	kEndVictimScene = false
-	kSyncActor    = false
+	kPrepareStage = false
 endFunction
 
 bool function isWornHalfNaked(Actor _actor) 	
@@ -2508,11 +2555,10 @@ function playVictimScene()
 			Debug.SendAnimationEvent(ActorRef, "SP_Victim_Scene_Normal_0" + Utility.RandomInt(1, 5))	
 		endif
 	endif
-	kEndVictimScene = true
 endFunction
 
 ; perk or poison 획득
-function addSkillPerk()
+function addSkillPerk ()
 	; earn skillPoint
 	if IsPlayer		
 		int randomNum = Utility.RandomInt(0,10)
@@ -2530,4 +2576,12 @@ function addSkillPerk()
 			Game.AdvanceSkill(_SkillName , 1.0)
 		endif
 	endif	
+endFunction
+
+function wakeUpAnimating ()
+	if sfxActionType == "wakeup"
+		Debug.SendAnimationEvent(ActorRef, "SP_Getup_0" + Utility.RandomInt(1,2))
+		Utility.Wait(2.0)
+	endif
+
 endFunction

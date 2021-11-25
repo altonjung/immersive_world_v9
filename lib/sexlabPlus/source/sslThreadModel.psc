@@ -1356,9 +1356,10 @@ function SetFurnitureIgnored(bool disabling = true)
 	if !CenterRef || CenterRef == none
 		return
 	endIf
-	CenterRef.SetDestroyed(disabling)
-;	CenterRef.ClearDestruction()
-	CenterRef.BlockActivation(disabling)
+	log("SetFurnitureIgnored")
+	; CenterRef.SetDestroyed(disabling)
+; ;	CenterRef.ClearDestruction()
+; 	; CenterRef.BlockActivation(disabling)
 	CenterRef.SetNoFavorAllowed(disabling)
 endFunction
 

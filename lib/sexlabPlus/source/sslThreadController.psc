@@ -66,6 +66,7 @@ state Prepare
 	function FireAction()
 
 		log("Prepare " + LeadIn)
+		log("aggressive " + victims.length)
 
 		HookAnimationPrepare()
 
@@ -92,24 +93,35 @@ state Prepare
 
 		int actorIdx = 0
 		int readyCount = 0
-	
-		; love, prostitute 액션인 경우,  NPC 액터가 먼저 중심으로 이동
-		if ActorCount > 1 && victims.length == 0			
 
+		; 강제 액션이 아닌경우, 배드신 확인
+		if victims.length == 0
 			int firstActorIdx = 0
-			if ActorCount == 2
+
+			if UsingSingleBed || UsingDoubleBed || UsingBedRoll	
+				while actorIdx < ActorCount
+					ActorAlias[actorIdx].bedScene = true
+					actorIdx += 1
+					Utility.wait(0.1)
+				endWhile
+		
+				;배드씬인 경우 player 나중에 이동				
 				if  Positions[0] == PlayerRef 
 					firstActorIdx = 1
 				endif
-			endif 
-			
-			ActorAlias[firstActorIdx].welcomeScene = true
+			else 
+				while actorIdx < ActorCount
+					ActorAlias[actorIdx].groundScene = true
+					actorIdx += 1
+					Utility.wait(0.1)
+				endWhile
+			endif
+
 			ActorAlias[firstActorIdx].PrepareActor()
+
 			while ActorAlias[firstActorIdx].kPrepareActor == false
 				Utility.wait(0.1)
 			endWhile
-
-			Utility.wait(5.0)
 		endif
 		
 		ModEvent.Send(ModEvent.Create(Key("Prepare")))
@@ -126,18 +138,9 @@ state Prepare
 				actorIdx += 1
 			endWhile
 			Utility.wait(0.1)
-		endWhile		
+		endWhile	
 
-		actorIdx = 0
-		while actorIdx < actorCount
-			ActorAlias[actorIdx].kPrepareActor = false
-			actorIdx += 1
-			
-			; random 으로 옷을 벗음
-			if Utility.RandomInt(0, 10) > 5
-				ActorAlias[actorIdx].Strip()
-			endif			
-		endWhile		
+		Utility.wait(3.0)
 
 		RegisterForSingleUpdate(0.1)
 	endFunction
@@ -231,37 +234,12 @@ state Advancing
 		else 
 			if Stage <= 1
 				Stage = 1	
-			endif 
-
-			; log("thread id " + tid)
-			; sfxPresceneType01.stop()
-			; sfxPresceneType01.ForceStart()
-			; log("scene is playing " + sfxPresceneType01.isPlaying())			
-
-			ModEvent.Send(ModEvent.Create(Key("Sync")))				
-			; sync 값 확인
-			int actorIdx = 0
-			int readyCount = 0		
-			while readyCount < ActorCount
-				readyCount = 0
-				actorIdx = 0
-				while actorIdx < actorCount
-					if ActorAlias[actorIdx].kSyncActor
-						readyCount += 1
-					endif
-					actorIdx += 1
-				endWhile
-				Utility.wait(0.1)
-			endWhile
+			endif 			
 				
-			; sync 값 초기화
-			actorIdx = 0	
-			while actorIdx < actorCount
-				ActorAlias[actorIdx].kSyncActor = false
-				actorIdx += 1
-			endWhile
-				
+			PlayStageAnimations()
 			SyncDone()
+
+			RegisterForSingleUpdate(0.1)
 		endif 
 	endFunction
 
@@ -296,8 +274,7 @@ state Animating
 		RealTime[0] = Utility.GetCurrentRealTime()
 		SoundFX  = Animation.GetSoundFX(Stage)
 		SFXDelay = ClampFloat(BaseDelay - ((Stage * 0.3) * ((Stage != 1) as int)), 0.5, 30.0)
-		ResolveTimers()
-		PlayStageAnimations()
+		ResolveTimers()		
 		; Send events
 		if !LeadIn && Stage >= StageCount && !DisableOrgasms
 			SendThreadEvent("OrgasmStart")
@@ -1020,9 +997,7 @@ function selectAniamtion()
 		int idx = 0
 
 		String[] _aniIncludeTags = new String[2]
-		String _aniExcludeTag = ""		
-		
-		log("selectAnimation from " + Animations.length)
+		String _aniExcludeTag = ""			
 
 		; 침대 scene 인지 아닌지 여부 확인 leadin에 대해
 
@@ -1031,10 +1006,10 @@ function selectAniamtion()
 				_aniIncludeTags[0] = "Aggressive"
 				_aniIncludeTags[1] = "Rape"
 			else 
-				if !(UsingSingleBed || UsingDoubleBed || UsingBedRoll)		; 침실 모드가 아니라면	
-					_aniIncludeTags[0] = "Standing"
-				else 
+				if UsingSingleBed || UsingDoubleBed || UsingBedRoll		; 침실 모드라면
 					_aniIncludeTags[0] = "Laying"
+				else 
+					_aniIncludeTags[0] = "Standing"
 				endif				
 			endif				
 		else
@@ -1053,7 +1028,7 @@ function selectAniamtion()
 		endif
 
 		if !(UsingSingleBed || UsingDoubleBed)			; 침실 모드가 아니라면
-			_aniExcludeTag = "Beds"		
+			_aniExcludeTag = "Beds"
 		endif			
 
 		while tagid < Animations.length && idx < 100
@@ -1298,27 +1273,31 @@ function PlayStageAnimations()
 	if Stage <= StageCount
 		Animation.GetAnimEvents(AnimEvents, Stage)
 
+		ModEvent.Send(ModEvent.Create(Key("ReadyScene")))
+		ModEvent.Send(ModEvent.Create(Key("PrepareStage")))		
+
 		int actorIdx = 0
-		if stage == 1		
+		int readyCount = 0
+		while readyCount < ActorCount
+			readyCount = 0
+			actorIdx = 0
 			while actorIdx < actorCount
-				ActorAlias[actorIdx].ReadyScene()	; 첫 스테이징 시작 처리
+				if ActorAlias[actorIdx].kPrepareStage
+					readyCount += 1
+				endif
 				actorIdx += 1
 			endWhile
-		endif
-		
-		actorIdx = 0
-		while actorIdx < actorCount
-			ActorAlias[actorIdx].PrepareStage()
-			actorIdx += 1	
-		endwhile
+			Utility.wait(0.1)
+		endWhile		
 
 		actorIdx = 0
 		while actorIdx < actorCount
-			ActorAlias[actorIdx].RunStage()
-			actorIdx += 1	
-		endwhile
+			ActorAlias[actorIdx].kPrepareStage = false
+			actorIdx += 1		
+		endWhile
 
 		StageTimer = RealTime[0] + GetTimer()
+		ModEvent.Send(ModEvent.Create(Key("RunStage")))
 	endIf
 endFunction
 
