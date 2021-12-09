@@ -1020,26 +1020,31 @@ Event OnHit(ObjectReference akAggressor, Form akSource, Projectile akProjectile,
 			elseif aggressor.HasKeyWordString("ActorTypeGiant")
 				hitCount += 1
 
-				breakArmor.handleArmorDrop(self, aggressor, akSource)			
-				hitCount = hitCount / 2
-			elseif aggressor.HasKeyWordString("ActorTypeCreature")
+				if hitCount > 3
+					breakArmor.handleArmorDrop(self, aggressor, akSource)			
+					hitCount = hitCount / 2
+				endif
+			elseif aggressor.HasKeyWordString("ActorTypeAnimal")
 				biteCount += 1
 
-				if 10 < biteCount 
+				if biteCount > 10
 					breakArmor.handleArmorBurn(self, aggressor, akSource)
 					biteCount = biteCount / 2
 				endif
 			elseif  checkFireSpell(akSource)
 				float currentTime = Utility.GetCurrentRealTime()	
-				if currentTime - lastFireBurnTime < 10
+				; 이전 불 데이지를 받은 상태에서 10초 이하로 다시 불 데미지를 받는 경우 burnCount 1 증가
+				if (currentTime - lastFireBurnTime) < 10
 					burnCount += 1
-				else 
-					burnCount = 1
+				else
+					if  burnCount != 0
+						burnCount -= 1
+					endif
 				endif
 				
 				lastFireBurnTime = currentTime
 
-				if burnCount > 5
+				if burnCount > 10
 					breakArmor.handleArmorBurn(self, aggressor, akSource)
 					burnCount = burnCount / 2
 				endif
@@ -1068,22 +1073,23 @@ state playerRole
 	Event OnObjectEquipped(Form akBaseObject, ObjectReference akReference)
 		Armor _armor = akBaseObject as armor
 		if _armor.IsClothingBody()
-			self.RemoveFromFaction(breakArmor.getBanditFriendFaction())
-			self.RemoveFromFaction(breakArmor.getCreatureFriendFaction())
-			if _armor.HasKeywordString("BanditClothing")
+			self.RemoveFromFaction(breakArmor.getFactionBanditFriend())
+			self.RemoveFromFaction(breakArmor.getFactionCreatureFriend())
+			if breakArmor.isBanditArmor(_armor)
 				Debug.Notification("you treated as bandit")
-				self.AddToFaction(breakArmor.getBanditFriendFaction())
-			elseif _armor.HasKeywordString("CreatureClothing")
+				self.AddToFaction(breakArmor.getFactionBanditFriend())
+			elseif breakArmor.isForswornArmor(_armor)
 				Debug.Notification("you treated as animal")
-				self.AddToFaction(breakArmor.getCreatureFriendFaction())
+				self.AddToFaction(breakArmor.getFactionCreatureFriend())
 			endif		
 			UnregisterForUpdate()				
-		endif		
+		endif
 	EndEvent
 
 	Event OnObjectUnequipped(Form akBaseObject, ObjectReference akReference)	
 		Armor _armor = akBaseObject as armor
 		if _armor.IsClothingBody()
+			UnregisterForUpdate()
 			RegisterForSingleUpdate(5.0) ; 5초 뒤
 		endif
 	EndEvent
@@ -1091,13 +1097,15 @@ state playerRole
 	event OnUpdate()
 		if breakArmor.isWornHalfNakedArmor(self)
 			Debug.Notification("you naked!.. be careful")
-			if Utility.RandomInt(1, 2) > 1
-				self.AddToFaction(breakArmor.getBanditFriendFaction())
-			else
-				self.AddToFaction(breakArmor.getCreatureFriendFaction())
-			endif
+			self.AddToFaction(breakArmor.getFactionBanditFriend())
+			; self.AddToFaction(breakArmor.getFactionCreatureFriend())
 		endif
 	endEvent
+
+	Event OnPlayerLoadGame()		
+		Sound.SetInstanceVolume(breakArmor.getIntroSound().Play(self), 0.8)
+	EndEvent
+
 endState
 
 function armorBreakModuleInit()

@@ -1018,6 +1018,7 @@ function Save(int id = -1)
 		endWhile
 	endIf
 	; Import Offsets
+	ImportOffsetsDefault("BedOffset")
 	ImportOffsets("BedOffset")
 	; Reset saved keys if they no longer match
 	if LastKeyReg != Registry
@@ -1038,8 +1039,6 @@ function Save(int id = -1)
 	endIf
 	; Finalize tags and registry slot id
 	parent.Save(id)
-
-	log("save animation " + name + ", stages: " + stages)
 endFunction
 
 bool function IsInterspecies()
@@ -1589,7 +1588,31 @@ function ImportOffsets(string Type = "BedOffset")
 		if Values.Length != len
 			Values = Utility.CreateFloatArray(len)
 		endIf
-		int i
+		int i = 0
+		while i < len
+			Values[i] = JsonUtil.FloatListGet(File, Registry+"."+Type, i)
+			i += 1
+		endWhile
+		if Type == "BedOffset"
+			BedOffset = Values
+		endIf
+	endIf
+endFunction
+
+function ImportOffsetsDefault(string Type = "BedOffset")
+	float[] Values
+	if Type == "BedOffset"
+		Values = GetBedOffsets()
+	else
+		return
+	endIf
+	string File = "../SexLab/SexLabOffsetsDefault.json"
+	int len = 4
+	if JsonUtil.FloatListCount(File, Registry+"."+Type) == len || JsonUtil.IntListCount(File, Registry+"."+Type) == len
+		if Values.Length != len
+			Values = Utility.CreateFloatArray(len)
+		endIf
+		int i = 0
 		while i < len
 			Values[i] = JsonUtil.FloatListGet(File, Registry+"."+Type, i)
 			i += 1
@@ -1740,10 +1763,6 @@ function doSfxEyeExpression(Actor _actorRef, int position, int expressionIdx, in
 		; 오른쪽 눈
 		_actorRef.SetExpressionModifier(1, _strength)		;blink R
 	endif
-
-	; if position == 0
-	; 	log("expression " + sfxExpression + ", strength " + _strength)
-	; endif
 endFunction 
 
 function doSfxMouthExpression(Actor _actorRef, int position, int expressionIdx, int strength, bool OpenMouth, int powerOfMoan)	
@@ -1762,22 +1781,22 @@ function doSfxMouthExpression(Actor _actorRef, int position, int expressionIdx, 
 		if strength > 90
 			strength = 90
 		endif 
-	elseif powerOfMoan == 1
-		if strength < 10
-			strength = 10
-		endif 
-
-		if strength > 50
-			strength = 50
-		endif
-	else
-		if strength < 40
+	elseif powerOfMoan == 2
+		if strength < 45
 			strength = 40
 		endif 
 					
 		if strength > 70
 			strength = 70
+		endif 		
+	else		
+		if strength < 30
+			strength = 20
 		endif 
+
+		if strength > 50
+			strength = 50
+		endif
 	endif 
 
 	float _strength = strength / 100.0

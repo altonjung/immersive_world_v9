@@ -138,9 +138,7 @@ state Prepare
 				actorIdx += 1
 			endWhile
 			Utility.wait(0.1)
-		endWhile	
-
-		Utility.wait(3.0)
+		endWhile
 
 		RegisterForSingleUpdate(0.1)
 	endFunction
@@ -175,39 +173,17 @@ state Prepare
 		endIf
 		
 		; Start time trackers
-		RealTime[0] = Utility.GetCurrentRealTime()
+		RealTime[0] = SexLabUtil.GetCurrentGameRealTime()
 		SkillTime = RealTime[0]
 		StartedAt = RealTime[0]
-
-		ModEvent.Send(ModEvent.Create(Key("Startup")))
-
-		; check
-		int actorIdx = 0	
-		int readyCount = 0
-		while readyCount < ActorCount		
-			readyCount = 0
-			actorIdx = 0
-			while actorIdx < actorCount
-				if ActorAlias[actorIdx].kStartup
-					readyCount += 1
-				endif
-				actorIdx += 1
-			endWhile
-			Utility.wait(0.1)
-		endWhile
-
-		; reset
-		actorIdx = 0
-		while actorIdx < actorCount
-			ActorAlias[actorIdx].kStartup = false
-			actorIdx += 1
-		endWhile
 
 		; Start animating
 		Action("Advancing")
 	endEvent
 
-	function PlayStageAnimations()
+	function PlayStageAnimation()
+	endFunction
+	function ReadyStageAnimation()
 	endFunction
 	function ResetPositions()
 	endFunction
@@ -235,22 +211,10 @@ state Advancing
 			if Stage <= 1
 				Stage = 1	
 			endif 			
-				
-			PlayStageAnimations()
-			SyncDone()
-
+			
+			ReadyStageAnimation()
 			RegisterForSingleUpdate(0.1)
 		endif 
-	endFunction
-
-	function SyncDone()
-		if Stage > 1 && Stage > (StageCount * 0.5)
-			string[] Tags = Animation.GetRawTags()
-			IsType[6]  = IsType[6] || Females > 0 && Tags.Find("Vaginal") != -1
-			IsType[7]  = IsType[7] || Tags.Find("Anal")   != -1 || (Females == 0 && Tags.Find("Vaginal") != -1)
-			IsType[8]  = IsType[8] || Tags.Find("Oral")   != -1
-		endIf
-		RegisterForSingleUpdate(0.1)
 	endFunction
 	
 	event OnUpdate()
@@ -271,10 +235,12 @@ state Animating
 	function FireAction()
 		UnregisterForUpdate()
 		; Prepare loop
-		RealTime[0] = Utility.GetCurrentRealTime()
+		RealTime[0] = SexLabUtil.GetCurrentGameRealTime()
 		SoundFX  = Animation.GetSoundFX(Stage)
 		SFXDelay = ClampFloat(BaseDelay - ((Stage * 0.3) * ((Stage != 1) as int)), 0.5, 30.0)
 		ResolveTimers()		
+		PlayStageAnimation()
+		SyncDone()
 		; Send events
 		if !LeadIn && Stage >= StageCount && !DisableOrgasms
 			SendThreadEvent("OrgasmStart")
@@ -284,10 +250,19 @@ state Animating
 		RegisterForSingleUpdate(0.1)
 	endFunction
 
+	function SyncDone()
+		if Stage > 1 && Stage > (StageCount * 0.5)
+			string[] Tags = Animation.GetRawTags()
+			IsType[6]  = IsType[6] || Females > 0 && Tags.Find("Vaginal") != -1
+			IsType[7]  = IsType[7] || Tags.Find("Anal")   != -1 || (Females == 0 && Tags.Find("Vaginal") != -1)
+			IsType[8]  = IsType[8] || Tags.Find("Oral")   != -1
+		endIf
+	endFunction
+	
 	event OnUpdate()
 		; Debug.Trace("(thread update)")
 		; Update timer share
-		RealTime[0] = Utility.GetCurrentRealTime()		
+		RealTime[0] = SexLabUtil.GetCurrentGameRealTime()	
 		; 메뉴 모드 접근 시 onUpdate 초기화
 		if Utility.IsInMenuMode()
 			int actorIdx=0
@@ -310,6 +285,7 @@ state Animating
 
 		; Advance stage on timer
 		if (AutoAdvance || TimedStage) && StageTimer < RealTime[0]
+			log("AutoAdvance " + AutoAdvance + ", TimedStage " + TimedStage + ", StageTimer " + StageTimer + ", RT " + RealTime[0])
 			GoToStage((Stage + 1))
 			return
 		endIf
@@ -344,6 +320,7 @@ state Animating
 	function GoToStage(int ToStage)
 		UnregisterForUpdate()
 		Stage = ToStage
+
 		Action("Advancing")
 	endFunction
 
@@ -601,13 +578,13 @@ state Animating
 
 			UnregisterForUpdate()
 			
-			; Lock hotkeys and wait 12 seconds
+			; Lock hotkeys and wait 30 seconds
 			Utility.WaitMenuMode(1.0)
 			RegisterForKey(Hotkeys[kMoveScene])
 			; Ready
 			hkReady = true
-			i = 10 ; Time to wait
-			while i
+			i = 28 ; Time to wait
+			while i && hkReady
 				i -= 1
 				Utility.Wait(1.0)
 				if !PlayerRef.IsInFaction(Config.AnimatingFaction)
@@ -615,7 +592,7 @@ state Animating
 				endIf
 			endWhile
 		endIf
-		if PlayerRef.GetFactionRank(Config.AnimatingFaction) == 0
+		if GetState() == "Animating" && PlayerRef.GetFactionRank(Config.AnimatingFaction) == 0
 			Debug.Notification("Player movement locked - repositioning scene...")
 			ApplyFade()
 			; Disable Controls
@@ -873,13 +850,13 @@ function SetAnimation(int aid = -1)
 		if Stage == 1
 			ResetPositions()
 		else
-			int actorIdx = 0
-			while actorIdx < actorCount
-				ActorAlias[actorIdx].SyncAll(true)
-				actorIdx += 1
-			endWhile
-			Utility.WaitMenuMode(0.1)
-			PlayStageAnimations()
+			ActorAlias[0].SyncAll(true)
+			ActorAlias[1].SyncAll(true)
+			ActorAlias[2].SyncAll(true)
+			ActorAlias[3].SyncAll(true)
+			ActorAlias[4].SyncAll(true)
+			Utility.WaitMenuMode(0.2)
+			PlayStageAnimation()
 		endIf
 	endIf
 endFunction
@@ -991,63 +968,77 @@ function EndLeadIn()
 	endIf
 endFunction
 
-function selectAniamtion()
-		int[] _aniTagIds = new int[100]
-		int tagid = 0
-		int idx = 0
+function selectAniamtion()		
+		int[] _aniTempTagIds = new int[100]	
+		int[] _aniTagIds = new int[100]	
 
-		String[] _aniIncludeTags = new String[2]
-		String _aniExcludeTag = ""			
+		String[] _aniIncludeTags = new String[3]
+		String[] _aniExcludeTags = new String[3]			
 
 		; 침대 scene 인지 아닌지 여부 확인 leadin에 대해
 
-		if LeadIn
-			if Victims.length > 0
-				_aniIncludeTags[0] = "Aggressive"
-				_aniIncludeTags[1] = "Rape"
+		if Victims.length > 0
+			_aniIncludeTags[0] = "Aggressive"
+			_aniIncludeTags[1] = "Rape"
+
+			_aniExcludeTags[0] = "Loving"
+		Else			
+			if positions[0].GetRelationshipRank(positions[1]) == 4
+				_aniIncludeTags[0] = "Loving"
 			else 
-				if UsingSingleBed || UsingDoubleBed || UsingBedRoll		; 침실 모드라면
-					_aniIncludeTags[0] = "Laying"
-				else 
-					_aniIncludeTags[0] = "Standing"
-				endif				
-			endif				
-		else
-			if Victims.length > 0
-				_aniIncludeTags[0] = "Aggressive"
-				_aniIncludeTags[1] = "Rape"
+				_aniIncludeTags[0] = "Prostitute"
+			endif
+			if UsingSingleBed || UsingDoubleBed ; 침실 모드라면
+				_aniIncludeTags[1] = "Laying"
+				_aniIncludeTags[2] = "Beds"
+	
+				_aniExcludeTags[0] = "Standing"
 			else
-				if positions[0].GetRelationshipRank(positions[1]) == 4
-					_aniIncludeTags[0] = "Loving"
-					_aniIncludeTags[1] = "Prostitute"
-				else
-					_aniIncludeTags[0] = "Prostitute"
-					_aniIncludeTags[1] = "Default" 
-				endif
+				_aniIncludeTags[1] = "Laying"
+				_aniIncludeTags[2] = "Standing"
+	
+				_aniExcludeTags[0] = "Beds"
 			endif
 		endif
 
-		if !(UsingSingleBed || UsingDoubleBed)			; 침실 모드가 아니라면
-			_aniExcludeTag = "Beds"
-		endif			
-
-		while tagid < Animations.length && idx < 100
+		; include
+		int tagid = 0	
+		int _aniIdx = 0
+		while tagid < Animations.length && tagid < 100
 			int filterId = 0
-			while filterId < 5
+			while filterId < _aniIncludeTags.length
 				if Animations[tagid].HasTag(_aniIncludeTags[filterId])
-					if !Animations[tagid].HasTag(_aniExcludeTag)
-						_aniTagIds[idx] = tagid
-						idx +=1
-						filterId = 5
-					endif					
+					_aniTempTagIds[_aniIdx] = tagid										
+					_aniIdx += 1
+					filterId = 3
 				endIf
 				filterId += 1
 			endWhile 
 			tagid += 1
 		endWhile
 
-		if idx > 0
-			SetAnimation(_aniTagIds[Utility.RandomInt(0, idx - 1)])
+		;exclude
+		tagid = 0
+		_aniIdx = 0
+		while tagid < _aniTempTagIds.length && tagid < 100
+			int filterId = 0
+			bool found = false
+			sslBaseAnimation _sslBaseAnimation =  Animations[_aniTempTagIds[tagId]]
+			while filterId < _aniExcludeTags.length					
+				if _sslBaseAnimation.HasTag(_aniExcludeTags[filterId])
+					found = true
+				endIf
+				filterId += 1
+			endWhile 
+			if !found 
+				_aniTagIds[_aniIdx] = _aniTempTagIds[tagId]
+				_aniIdx += 1			
+			endif 
+			tagid += 1
+		endWhile
+
+		if _aniIdx > 0
+			SetAnimation(_aniTagIds[Utility.RandomInt(0, _aniIdx - 1)])
 		else
 			log("eligible animation not found")
 			SetAnimation()
@@ -1269,36 +1260,36 @@ int function GetAdjustPos()
 	return AdjustPos
 endFunction
 
-function PlayStageAnimations()
-	if Stage <= StageCount
-		Animation.GetAnimEvents(AnimEvents, Stage)
+function ReadyStageAnimation()
+	ModEvent.Send(ModEvent.Create(Key("ReadyScene")))
+	ModEvent.Send(ModEvent.Create(Key("PrepareStage")))		
 
-		ModEvent.Send(ModEvent.Create(Key("ReadyScene")))
-		ModEvent.Send(ModEvent.Create(Key("PrepareStage")))		
-
-		int actorIdx = 0
-		int readyCount = 0
-		while readyCount < ActorCount
-			readyCount = 0
-			actorIdx = 0
-			while actorIdx < actorCount
-				if ActorAlias[actorIdx].kPrepareStage
-					readyCount += 1
-				endif
-				actorIdx += 1
-			endWhile
-			Utility.wait(0.1)
-		endWhile		
-
+	int actorIdx = 0
+	int readyCount = 0
+	while readyCount < ActorCount
+		readyCount = 0
 		actorIdx = 0
 		while actorIdx < actorCount
-			ActorAlias[actorIdx].kPrepareStage = false
-			actorIdx += 1		
+			if ActorAlias[actorIdx].kPrepareStage
+				readyCount += 1
+			endif
+			actorIdx += 1
 		endWhile
+		Utility.wait(0.1)
+	endWhile
 
-		StageTimer = RealTime[0] + GetTimer()
-		ModEvent.Send(ModEvent.Create(Key("RunStage")))
-	endIf
+	actorIdx = 0
+	while actorIdx < actorCount
+		ActorAlias[actorIdx].kPrepareStage = false
+		actorIdx += 1
+	endWhile
+endFunction 
+
+function PlayStageAnimation()
+	Animation.GetAnimEvents(AnimEvents, Stage)
+	StageTimer = RealTime[0] + GetTimer()
+	
+	ModEvent.Send(ModEvent.Create(Key("RunStage")))
 endFunction
 
 ; ------------------------------------------------------- ;
@@ -1447,28 +1438,3 @@ endFunction
 event OnKeyDown(int keyCode)	
 	; StateCheck()
 endEvent
-
-;/ function StateCheck()
-	Log("THREAD STATE: "+GetState())
-	if ActorCount == 1
-		ActorAlias[0].Log("State: "+ActorAlias[0].GetState())
-	elseIf ActorCount == 2
-		ActorAlias[0].Log("State: "+ActorAlias[0].GetState())
-		ActorAlias[1].Log("State: "+ActorAlias[1].GetState())
-	elseIf ActorCount == 3
-		ActorAlias[0].Log("State: "+ActorAlias[0].GetState())
-		ActorAlias[1].Log("State: "+ActorAlias[1].GetState())
-		ActorAlias[2].Log("State: "+ActorAlias[2].GetState())
-	elseIf ActorCount == 4
-		ActorAlias[0].Log("State: "+ActorAlias[0].GetState())
-		ActorAlias[1].Log("State: "+ActorAlias[1].GetState())
-		ActorAlias[2].Log("State: "+ActorAlias[2].GetState())
-		ActorAlias[3].Log("State: "+ActorAlias[3].GetState())
-	elseIf ActorCount == 5
-		ActorAlias[0].Log("State: "+ActorAlias[0].GetState())
-		ActorAlias[1].Log("State: "+ActorAlias[1].GetState())
-		ActorAlias[2].Log("State: "+ActorAlias[2].GetState())
-		ActorAlias[3].Log("State: "+ActorAlias[3].GetState())
-		ActorAlias[4].Log("State: "+ActorAlias[4].GetState())
-	endIf
-endFunction /;

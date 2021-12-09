@@ -118,6 +118,7 @@ bool property IsDirty hidden
 	endFunction
 endProperty
 
+
 ; Timer Info
 bool UseCustomTimers
 float[] CustomTimers
@@ -324,8 +325,6 @@ state Making
 	endFunction
 
 	sslThreadController function StartThread()
-		log("StartThread")
-		
 		GoToState("Starting")
 		UnregisterForUpdate()
 		int i
@@ -458,21 +457,17 @@ state Making
 		endIf
 
 		; Check LeadIn CoolDown and if LeadIn is allowed to prevent compatibility issues
-		float LeadInCoolDown = Math.Abs(Utility.GetCurrentRealTime() - StorageUtil.GetFloatValue(Config,"SexLab.LastLeadInEnd",0))
+		float LeadInCoolDown = Math.Abs(SexLabUtil.GetCurrentGameRealTime() - StorageUtil.GetFloatValue(Config,"SexLab.LastLeadInEnd",0))
 		if CustomAnimations.Length
 			NoLeadIn = true
 			if LeadIn
 				Log("WARNING: LeadIn detected on Forced Animations. Disabling LeadIn")
 				LeadIn = false
 			endIf
-		elseIf LeadInCoolDown < Config.LeadInCoolDown
-			Log("LeadIn CoolDown "+LeadInCoolDown+"::"+Config.LeadInCoolDown)
-			DisableLeadIn(True)
-		endIf
-		
+		elseIf LeadIn
 		; leadin animations
 		i = LeadAnimations.Length
-		if i && LeadIn
+			if i
 			bool[] Valid = Utility.CreateBoolArray(i)
 			while i
 				i -= 1
@@ -500,6 +495,14 @@ state Making
 				LeadAnimations = Output
 			endIf
 		endIf
+		elseIf LeadInCoolDown < Config.LeadInCoolDown
+			Log("LeadIn CoolDown "+LeadInCoolDown+"::"+Config.LeadInCoolDown)
+			DisableLeadIn(True)
+		elseIf Config.LeadInCoolDown > 0 && PrimaryAnimations && PrimaryAnimations.Length && AnimSlots.CountTag(PrimaryAnimations, "Anal,Vaginal") < 1
+			Log("None of the PrimaryAnimations have 'Anal' or 'Vaginal' tags. Disabling LeadIn")
+			DisableLeadIn(True)
+		endIf
+		
 		
 		; ------------------------- ;
 		; --    Locate Center    -- ;
@@ -1003,6 +1006,16 @@ function ChangeActors(Actor[] NewPositions)
 	endWhile
 	; Save new positions information
 	Positions  = NewPositions
+	; Double Checking the Positions for actors without Slots
+	i = NewPositions.Length
+	while i > 0
+		i -= 1
+		if FindSlot(NewPositions[i]) == -1
+			Positions = PapyrusUtil.RemoveActor(Positions, NewPositions[i])
+			Log("ChangeActors("+NewPositions+") -- Failed to add new actor '"+NewPositions[i].GetLeveledActorBase().GetName()+"' -- They were unable to fill an actor alias", "WARNING")
+		endIf
+	endWhile
+	
 	ActorCount = Positions.Length
 	Genders    = NewGenders
 	HasPlayer  = Positions.Find(PlayerRef) != -1
@@ -1017,7 +1030,7 @@ function ChangeActors(Actor[] NewPositions)
 			Stage  = 1
 			LeadIn = false
 			QuickEvent("Strip")
-			StorageUtil.SetFloatValue(Config,"SexLab.LastLeadInEnd", Utility.GetCurrentRealTime())
+			StorageUtil.SetFloatValue(Config,"SexLab.LastLeadInEnd", SexLabUtil.GetCurrentGameRealTime())
 			SendThreadEvent("LeadInEnd")
 			SetAnimation(aid)
 		;	Action("Advancing")
@@ -1356,10 +1369,9 @@ function SetFurnitureIgnored(bool disabling = true)
 	if !CenterRef || CenterRef == none
 		return
 	endIf
-	log("SetFurnitureIgnored")
-	; CenterRef.SetDestroyed(disabling)
-; ;	CenterRef.ClearDestruction()
-; 	; CenterRef.BlockActivation(disabling)
+	CenterRef.SetDestroyed(disabling)
+;	CenterRef.ClearDestruction()
+	CenterRef.BlockActivation(disabling)
 	CenterRef.SetNoFavorAllowed(disabling)
 endFunction
 
@@ -1478,6 +1490,7 @@ bool function CenterOnBed(bool AskPlayer = true, float Radius = 750.0)
 	if BedStatus[0] == -1 || (InStart && (!HasPlayer && Config.NPCBed == 0) || (HasPlayer && AskBed == 0))
 		return false ; Beds forbidden by flag or starting bed check/prompt disabled
 	endIf
+	bool BedScene = BedStatus[0] == 1
  	ObjectReference FoundBed
 	int i = ActorCount
 	while i > 0
@@ -1492,10 +1505,28 @@ bool function CenterOnBed(bool AskPlayer = true, float Radius = 750.0)
 		endIf
 	endWhile
 	if HasPlayer && (!InStart || AskBed == 1 || (AskBed == 2 && (!IsVictim(PlayerRef) || UseNPCBed)))
+		if BedScene
+			FoundBed  = ThreadLib.FindBed(PlayerRef, Radius * 2) ; Check within radius of player
+		else
 		FoundBed  = ThreadLib.FindBed(PlayerRef, Radius) ; Check within radius of player
+			; Same Floor only
+		;	if FoundBed && !ThreadLib.SameFloor(FoundBed, PlayerRef.GetPositionZ(), 200)
+		;		Log("FoundBed: "+FoundBed+" is not in the same floor")
+		;		FoundBed = none
+		;	endIf
+		endIf
 		AskPlayer = AskPlayer && (!InStart || !(AskBed == 2 && IsVictim(PlayerRef))) ; Disable prompt if bed found but shouldn't ask
 	elseIf !HasPlayer && UseNPCBed
+		if BedScene
+			FoundBed = ThreadLib.FindBed(Positions[0], Radius * 2) ; Check within radius of first position, if NPC beds are allowed
+		else
 		FoundBed = ThreadLib.FindBed(Positions[0], Radius) ; Check within radius of first position, if NPC beds are allowed
+			; Same Floor only
+		;	if FoundBed && !ThreadLib.SameFloor(FoundBed, PlayerRef.GetPositionZ(), 200)
+		;		Log("FoundBed: "+FoundBed+" is not in the same floor")
+		;		FoundBed = none
+		;	endIf
+	endIf
 	endIf
 	; Found a bed AND EITHER forced use OR don't care about players choice OR or player approved
 	if FoundBed && (BedStatus[0] == 1 || (!AskPlayer || (AskPlayer && (Config.UseBed.Show() as bool))))

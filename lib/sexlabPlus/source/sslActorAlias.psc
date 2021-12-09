@@ -127,7 +127,7 @@ function RegisterEvents()
 	RegisterForModEvent(e+"Sync", "SyncActor")
 	RegisterForModEvent(e+"Reset", "ResetActor")
 	RegisterForModEvent(e+"Refresh", "RefreshActor")
-	RegisterForModEvent(e+"Startup", "StartAnimating")
+	; RegisterForModEvent(e+"Startup", "StartAnimating")
 
 	; Stage Events
 	RegisterForModEvent(e+"ReadyScene", "ReadyScene")
@@ -196,6 +196,7 @@ bool function SetActor(Actor ProspectRef)
 			ActorKey += "M"
 		endIf
 	endIf
+	NioScale = 1.0
 	float TempScale
 	String Node = "NPC"
 	if NetImmerse.HasNode(ActorRef, Node, False)
@@ -213,7 +214,6 @@ bool function SetActor(Actor ProspectRef)
 	endIf
 	
 	if Config.HasNiOverride && !IsCreature
-		NioScale = 1.0
 		string[] MOD_OVERRIDE_KEY = NiOverride.GetNodeTransformKeys(ActorRef, False, isRealFemale, "NPC")
 		int idx = 0
 		While idx < MOD_OVERRIDE_KEY.Length
@@ -427,37 +427,6 @@ state Ready
 			PathToCenter()
 		endIf
 		LockActor()
-		
-		; if BedStatus[1] <= 1
-		; 	; pre-move to starting position near other actors
-		; 	Offsets[0] = 0.0
-		; 	Offsets[1] = 0.0
-		; 	Offsets[2] = 5.0
-		; 	Offsets[3] = 0.0
-		; 	; Starting position
-		; 	if Position == 1
-		; 		Offsets[0] = 25.0
-		; 		Offsets[3] = 180.0
-
-		; 	elseif Position == 2
-		; 		Offsets[1] = -25.0
-		; 		Offsets[3] = 90.0
-
-		; 	elseif Position == 3
-		; 		Offsets[1] = 25.0
-		; 		Offsets[3] = -90.0
-
-		; 	elseif Position == 4
-		; 		Offsets[0] = -25.0
-
-		; 	endIf
-		; 	OffsetCoords(Loc, Center, Offsets)
-		; 	MarkerRef.SetPosition(Loc[0], Loc[1], Loc[2])
-		; 	MarkerRef.SetAngle(Loc[3], Loc[4], Loc[5])
-		; 	ActorRef.SetPosition(Loc[0], Loc[1], Loc[2])
-		; 	ActorRef.SetAngle(Loc[3], Loc[4], Loc[5])
-		; 	AttachMarker()
-		; endIf
 
 		; Player specific actions
 		if IsPlayer
@@ -489,10 +458,7 @@ state Ready
 					Strapon = Config.GetStrapon()
 				endIf
 			endIf
-			; Strip actor
-			; Strip()
-			; ResolveStrapon()
-			; Debug.SendAnimationEvent(ActorRef, "SOSFastErect")
+
 			; Remove HDT High Heels
 			if Config.RemoveHeelEffect && ActorRef.GetWornForm(0x00000080)
 				HDTHeelSpell = Config.GetHDTSpell(ActorRef)
@@ -576,91 +542,89 @@ state Ready
 	function PathToCenter()
 		ObjectReference CenterRef = Thread.CenterAlias.GetReference()
 		ObjectReference WaitRef = CenterRef
-		if WaitRef == ActorRef
-			WaitRef = none
-		endIf
 
-		if CenterRef != ActorRef
+		if WaitRef != ActorRef
 			float Distance = ActorRef.GetDistance(WaitRef)
-			float distanceLimit = 15.0
+			float distanceLimit = 25.0
 
 			if bedScene
 				distanceLimit = 120.0
 			endif
 
 			if WaitRef && Distance < 8000.0 && Distance > distanceLimit
-				if CenterRef != ActorRef
-					ActorRef.SetFactionRank(AnimatingFaction, 2)
-					ActorRef.EvaluatePackage()
-				endIf
+				ActorRef.SetFactionRank(AnimatingFaction, 2)
+				ActorRef.EvaluatePackage()
+
 				ActorRef.SetLookAt(WaitRef, false)
 				if IsPlayer
 					Thread.RemoveFade()
 				endIf
 				
 				; Start wait loop for actor pathing.
-				int StuckCheck  = 0
-				float Failsafe  = Utility.GetCurrentRealTime() + 20.0
-				float Previous = Distance
+				; int StuckCheck  = 0
+				float Failsafe  = Utility.GetCurrentRealTime() + 15.0
+				; float Previous = Distance
 
 				while Distance > distanceLimit && Utility.GetCurrentRealTime() < Failsafe
 					Utility.Wait(0.5)					
 					Distance = ActorRef.GetDistance(WaitRef)					
-					if Previous == Distance
-						if StuckCheck > 2 ; Stuck for 2nd time, end loop.
-							Distance = 0.0
-						endIf
-						StuckCheck += 1 ; End loop on next iteration if still stuck.
-					else
-						StuckCheck -= 1 ; Reset stuckcheck if progress was made.
-					endIf
-					Previous = Distance
-				endWhile
-				
-				ActorRef.ClearLookAt()
-				if CenterRef != ActorRef
-					ActorRef.SetFactionRank(AnimatingFaction, 1)
-					ActorRef.EvaluatePackage()
-				endIf
+					; if Previous == Distance
+					; 	if StuckCheck > 2 ; Stuck for 2nd time, end loop.
+					; 		Distance = 0.0
+					; 	endIf
+					; 	StuckCheck += 1 ; End loop on next iteration if still stuck.
+					; else
+					; 	StuckCheck -= 1 ; Reset stuckcheck if progress was made.
+					; endIf
+					; Previous = Distance
+				endWhile				
+				; ActorRef.ClearLookAt()
+
+				ActorRef.SetFactionRank(AnimatingFaction, 1)
+				ActorRef.EvaluatePackage()
 			endIf
 		endIf
+
+		; 현재 액터가 첫번재 액터 앞으로 이동
+		moveActorToFirstActor()
 
 		if bedScene
 			strip()
 
+			if position == 0 && Thread.positions.length > 1
+				ActorRef.SetHeadTracking(true)
+				ActorRef.SetLookAt(Thread.positions[1], false)
+			endif 
+
 			ActorRef.SetVehicle(WaitRef)
 			ActorRef.SetVehicle(ActorRef)
-			Debug.SendAnimationEvent(ActorRef, "IdleBedRollRightEnterStart")
-						
-			Utility.Wait(4.0)
-			; actor를 bed의 중심에 배치
-			ActorRef.ClearLookAt()
-				
-			string bedPosAnimation = ""
-
-			log("bed Position " + position)
-
-			if position == 0
-				bedPosAnimation = "SP_BPosition_" + Utility.RandomInt(11, 12)
+			Debug.SendAnimationEvent(ActorRef, "IdleBedRollRightEnterStart")					
+			Utility.Wait(4.5)				
+			if position == 0 && isFemale
+				Debug.SendAnimationEvent(ActorRef, "SP_Sit_1_02")
 			else 
-				bedPosAnimation = "SP_BPosition_0" + position
-			endif 
-			Debug.SendAnimationEvent(ActorRef, bedPosAnimation)
-			Utility.Wait(2.0)
+				Debug.SendAnimationEvent(ActorRef, "SP_Sit_0_02")
+			endif
 		endif
 
 		if groundScene
+			Debug.SendAnimationEvent(ActorRef, "IdleSitCrossLeggedEnter")
 
-			log("ground position " + position)
-			if position == 0
-				Debug.SendAnimationEvent(ActorRef, "IdleBedRollRightEnterStart")
-				Utility.Wait(4.0)
-			else 
+			if position == 0 && Thread.positions.length > 1
+				ActorRef.SetHeadTracking(true)
+				ActorRef.SetLookAt(Thread.positions[1], false)
+			endif 
+
+			Utility.Wait(3.0)
+			if position > 0
 				strip()
 			endif
 
-			Debug.SendAnimationEvent(ActorRef, "SP_GPosition_0" + position)		
-			Utility.Wait(2.0)
+			if position == 0 && isFemale
+				Debug.SendAnimationEvent(ActorRef, "SP_Sit_1_01")
+			else 
+				Debug.SendAnimationEvent(ActorRef, "SP_Sit_0_01")
+			endif
 		endif
 	endFunction
 
@@ -679,15 +643,15 @@ state Prepare
 			if IsPlayer
 				Thread.ApplyFade()
 			endIf
-			Offsets = new float[4]
-			GetPositionInfo()
-			; Starting position
-			OffsetCoords(Loc, Center, Offsets)
-			MarkerRef.SetPosition(Loc[0], Loc[1], Loc[2])
-			MarkerRef.SetAngle(Loc[3], Loc[4], Loc[5])
-			ActorRef.SetPosition(Loc[0], Loc[1], Loc[2])
-			ActorRef.SetAngle(Loc[3], Loc[4], Loc[5])
-			AttachMarker()
+			; Offsets = new float[4]
+			; GetPositionInfo()
+			; ; Starting position
+			; OffsetCoords(Loc, Center, Offsets)
+			; MarkerRef.SetPosition(Loc[0], Loc[1], Loc[2])
+			; MarkerRef.SetAngle(Loc[3], Loc[4], Loc[5])
+			; ActorRef.SetPosition(Loc[0], Loc[1], Loc[2])
+			; ActorRef.SetAngle(Loc[3], Loc[4], Loc[5])
+			; AttachMarker()
 
 			kPrepareActor = true
 			StartAnimating()
@@ -704,7 +668,7 @@ state Prepare
 		StartedAt  = Utility.GetCurrentRealTime()
 		LastOrgasm = StartedAt
 		GoToState("Animating")
-		SyncAll(true)
+		; SyncAll(true)
 		; PlayingSA = Animation.Registry
 		if ActorRef.GetActorValue("Paralysis") != 0.0
 			Debug.SendAnimationEvent(ActorRef, "Ragdoll")
@@ -720,7 +684,7 @@ state Prepare
 			MiscUtil.SetFreeCameraSpeed(Config.AutoSUCSM)
 		endIf
 
-		kStartup = true
+		; kStartup = true
 	endFunction
 	
 	event ResetActor()
@@ -1081,8 +1045,8 @@ function RestoreActorDefaults()
 	; Remove SOS erection
 	Debug.SendAnimationEvent(ActorRef, "SOSFlaccid")
 	; Clear from animating faction
-	; ActorRef.SetFactionRank(AnimatingFaction, -1)
-	; ActorRef.RemoveFromFaction(AnimatingFaction)
+	ActorRef.SetFactionRank(AnimatingFaction, -1)
+	ActorRef.RemoveFromFaction(AnimatingFaction)
 	ActorUtil.RemovePackageOverride(ActorRef, Config.DoNothing)
 	ActorRef.EvaluatePackage()
 ;	Log(ActorName +"- Angle:[X:"+ActorRef.GetAngleX()+"Y:"+ActorRef.GetAngleY()+"Z:"+ActorRef.GetAngleZ()+"] Position:[X:"+ActorRef.GetPositionX()+"Y:"+ActorRef.GetPositionY()+"Z:"+ActorRef.GetPositionZ()+"]", "RestoreActorDefaults()")
@@ -1553,6 +1517,10 @@ function ClearEvents()
 	UnregisterForModEvent(e+"Reset")
 	UnregisterForModEvent(e+"Refresh")
 	UnregisterForModEvent(e+"Startup")
+
+	UnregisterForModEvent(e+"ReadyScene")
+	UnregisterForModEvent(e+"PrepareStage")
+	UnregisterForModEvent(e+"RunStage")
 endFunction
 
 function Initialize()
@@ -1750,7 +1718,7 @@ endfunction
 
 ; alton added
 bool property kPrepareActor = false auto hidden
-bool property kStartup = false auto hidden
+; bool property kStartup = false auto hidden
 bool property kResetActor   = false auto hidden
 bool property kRefreshActor = false auto hidden
 bool property kPrepareStage = false auto hidden
@@ -1982,11 +1950,13 @@ state Animating
 			Debug.Notification("### Animation " + animation.name + ", Stage " + Thread.Stage + ", expression " + sfxExpressionType + ", actions " + sfxActionType + ", SoundType " + sfxSoundType + ", VoiceType " + sfxVoiceType)
 			log("### Animation " + animation.name + ", Stage " + Thread.Stage + ", expression " + sfxExpressionType + ", soundType " + sfxSoundType + ", VoiceType " + sfxVoiceType + ", bed " + Thread.UsingBed)
 		endif		
+					
 		kPrepareStage = true
 	endFunction
 
 	; 애니메이션, 사운드 구동
 	function RunStage()		
+		SyncActor()
 		sfxPlayStatus = 1 ; play animation
 		RegisterForSingleUpdate(0.0)
 	endFunction
@@ -2037,21 +2007,16 @@ state Animating
 	
 					; 연산을 통한 지연시간 검사
 					opTime = Utility.GetCurrentRealTime() - currentTime
-					if waitTime >= opTime
-						waitTime = waitTime - opTime			
-					endif
-
-					updateTime = waitTime
-				else 
-					updateTime = waitTime
-				endif 				
+					waitTime = waitTime - opTime
+				endif
+				updateTime = waitTime			
 	
 				sfxSoundWaitBlockIdx += 1
 				updateTime += delayTime
 
 				if updateTime < 0.0
 					updateTime = 0.0
-				endif 
+				endif
 
 				aniExpectPlayTime = aniPlayTime + updateTime
 			else 
@@ -2063,7 +2028,6 @@ state Animating
 		elseif sfxPlayStatus == 1 ; animation play				
 			initSfxState()
 
-			SyncActor()
 			Debug.SendAnimationEvent(ActorRef, Animation.FetchPositionStage(Position, Thread.Stage))
 
 			aniStartTime = currentTime
@@ -2083,9 +2047,6 @@ state Animating
 
 		; play sfx sound
 		if actorVolume > 0.0 && sfxSoundType != ""
-
-			; log("playSfxSound " + sfxSoundType)	
-
 			; 콘솔창같은 환경으로 인해, 시간 지연이 발생하는 경우, sfx 미출력						
 			Sound.StopInstance(sfxSoundId)
 			if sfxSoundType == "fuck"			; fuck
@@ -2113,92 +2074,98 @@ state Animating
 		if  sfxVoiceType != ""
 			if actorVolume > 0 && (currentTime - sfxVoiceOffset) >= sfxVoiceLimit
 
-				; log("playSfxVoice " + sfxVoiceType + ", IsSilent " + IsSilent + " sfx")
-				
-				Sound.StopInstance(sfxOrgasmVoiceId)
-				Sound.StopInstance(sfxVoiceId)
-
-				sfxPowerOfMoan = 1
-				if sfxVoiceType == "gig"
-					sfxVoiceId = voice.getGiggleSound().Play(actorRef)
-				elseif sfxVoiceType == "thre"
-					sfxVoiceId = voice.getThreatenSound().Play(actorRef)					
-				elseif sfxVoiceType == "hor1"	; horror
-					sfxVoiceId = Voice.GetHorror1Sound().Play(actorRef)
-				elseif sfxVoiceType == "hor2"	; horror
-					sfxVoiceId = Voice.GetHorror2Sound().Play(actorRef)
-				elseif sfxVoiceType == "hor3"	; horror
-					sfxVoiceId = Voice.GetHorror3Sound().Play(actorRef)
-				elseif sfxVoiceType == "pan1"	; pain
-					sfxVoiceId = Voice.GetPain1Sound().Play(actorRef)
-				elseif sfxVoiceType == "pan2"	; pain
-					sfxVoiceId = Voice.GetPain2Sound().Play(actorRef)
-				elseif sfxVoiceType == "pan3"	; pain
-					sfxVoiceId = Voice.GetPain3Sound().Play(actorRef)
-				elseif sfxVoiceType == "hat1"	; hate
-					sfxVoiceId = Voice.GetHate1Sound().Play(actorRef)
-				elseif sfxVoiceType == "hat2"	; hate
-					sfxVoiceId = Voice.GetHate2Sound().Play(actorRef)
-				elseif sfxVoiceType == "hat3"	; hate
-					sfxVoiceId = Voice.GetHate3Sound().Play(actorRef)
-				elseif sfxVoiceType == "ejy1"	; enjoy
-					sfxVoiceId = Voice.GetEnjoy1Sound().Play(actorRef)
-				elseif sfxVoiceType == "ejy2"	; enjoy
-					sfxVoiceId = Voice.GetEnjoy2Sound().Play(actorRef)
-					sfxPowerOfMoan = 2
-				elseif sfxVoiceType == "ejy3"	; enjoy
-					sfxPowerOfMoan = 3
-					sfxVoiceId = Voice.GetEnjoy3Sound().Play(actorRef)
-				elseif sfxVoiceType == "hpy1"	; happy
-					sfxVoiceId = Voice.GetHappy1Sound().Play(actorRef)
-				elseif sfxVoiceType == "hpy2"	; happy
-					sfxVoiceId = Voice.GetHappy2Sound().Play(actorRef)
-					sfxPowerOfMoan = 2
-				elseif sfxVoiceType == "hpy3"	; happy
-					sfxVoiceId = Voice.GetHappy3Sound().Play(actorRef)					
-					sfxPowerOfMoan = 3
-				elseif sfxVoiceType == "fel1"	; feel
-					sfxVoiceId = Voice.GetFeel1Sound().Play(actorRef)
-				elseif sfxVoiceType == "fel2"	; feel
-					sfxVoiceId = Voice.GetFeel2Sound().Play(actorRef)
-				elseif sfxVoiceType == "fel3"	; feel
-					sfxVoiceId = Voice.GetFeel3Sound().Play(actorRef)	
-					sfxPowerOfMoan = 3								
-				elseif sfxVoiceType == "lick"
-					sfxVoiceId = voice.getLickSound().Play(actorRef)
-				elseif sfxVoiceType == "moan"	; moan
-					sfxPowerOfMoan = 3
-					sfxVoiceId = Voice.GetMoanSound().Play(actorRef)					
-				elseif sfxVoiceType == "suks"	; mouth
-					sfxVoiceId = voice.getSuckSlowSound().Play(actorRef)
-					sfxPowerOfMoan = 3
-				elseif sfxVoiceType == "sukf"	; mouth
-					sfxVoiceId = voice.getSuckFastSound().Play(actorRef)		
-					sfxPowerOfMoan = 3
-				elseif sfxVoiceType == "deep"	; deep mouth
-					sfxVoiceId = voice.getDeepSound().Play(actorRef)
-					sfxPowerOfMoan = 3
-				elseif sfxVoiceType == "kiss"
-					sfxVoiceId = Voice.GetKissSound().Play(actorRef)
-				elseif sfxVoiceType == "orgasm"					
-					if sfxOrgasmStep == 0
-						sfxVoiceId = Voice.GetHappy1Sound().Play(actorRef)
-						sfxVoiceLimit = 5
-						sfxPowerOfMoan = 3
-						sfxOrgasmStep = 1
-					else 
-						sfxVoiceId = Voice.GetOrgasmSound().Play(actorRef)
-						sfxVoiceLimit = 100
-						sfxPowerOfMoan = 4
-					endif					
-				else
-					sfxVoiceId = 0
-				endif
-
-				if sfxVoiceId != 0									
+				if sfxVoiceId != 0	; 재사용
 					Sound.SetInstanceVolume(sfxVoiceId, actorVolume)
 					sfxVoiceOffset = currentTime
-				endif			
+				else 
+
+					; log("playSfxVoice " + sfxVoiceType + ", IsSilent " + IsSilent + " sfx")
+					
+					Sound.StopInstance(sfxOrgasmVoiceId)
+					Sound.StopInstance(sfxVoiceId)
+
+					sfxPowerOfMoan = 1
+					if sfxVoiceType == "gig"
+						sfxVoiceId = voice.getGiggleSound().Play(actorRef)
+					elseif sfxVoiceType == "thre"
+						sfxVoiceId = voice.getThreatenSound().Play(actorRef)					
+					elseif sfxVoiceType == "hor1"	; horror
+						sfxVoiceId = Voice.GetHorror1Sound().Play(actorRef)
+					elseif sfxVoiceType == "hor2"	; horror
+						sfxVoiceId = Voice.GetHorror2Sound().Play(actorRef)
+					elseif sfxVoiceType == "hor3"	; horror
+						sfxVoiceId = Voice.GetHorror3Sound().Play(actorRef)
+					elseif sfxVoiceType == "pan1"	; pain
+						sfxVoiceId = Voice.GetPain1Sound().Play(actorRef)
+					elseif sfxVoiceType == "pan2"	; pain
+						sfxVoiceId = Voice.GetPain2Sound().Play(actorRef)
+					elseif sfxVoiceType == "pan3"	; pain
+						sfxVoiceId = Voice.GetPain3Sound().Play(actorRef)
+					elseif sfxVoiceType == "hat1"	; hate
+						sfxVoiceId = Voice.GetHate1Sound().Play(actorRef)
+					elseif sfxVoiceType == "hat2"	; hate
+						sfxVoiceId = Voice.GetHate2Sound().Play(actorRef)
+					elseif sfxVoiceType == "hat3"	; hate
+						sfxVoiceId = Voice.GetHate3Sound().Play(actorRef)
+					elseif sfxVoiceType == "ejy1"	; enjoy
+						sfxVoiceId = Voice.GetEnjoy1Sound().Play(actorRef)
+					elseif sfxVoiceType == "ejy2"	; enjoy
+						sfxVoiceId = Voice.GetEnjoy2Sound().Play(actorRef)
+						sfxPowerOfMoan = 2
+					elseif sfxVoiceType == "ejy3"	; enjoy
+						sfxPowerOfMoan = 3
+						sfxVoiceId = Voice.GetEnjoy3Sound().Play(actorRef)
+					elseif sfxVoiceType == "hpy1"	; happy
+						sfxVoiceId = Voice.GetHappy1Sound().Play(actorRef)
+					elseif sfxVoiceType == "hpy2"	; happy
+						sfxVoiceId = Voice.GetHappy2Sound().Play(actorRef)
+						sfxPowerOfMoan = 2
+					elseif sfxVoiceType == "hpy3"	; happy
+						sfxVoiceId = Voice.GetHappy3Sound().Play(actorRef)					
+						sfxPowerOfMoan = 3
+					elseif sfxVoiceType == "fel1"	; feel
+						sfxVoiceId = Voice.GetFeel1Sound().Play(actorRef)
+					elseif sfxVoiceType == "fel2"	; feel
+						sfxVoiceId = Voice.GetFeel2Sound().Play(actorRef)
+					elseif sfxVoiceType == "fel3"	; feel
+						sfxVoiceId = Voice.GetFeel3Sound().Play(actorRef)	
+						sfxPowerOfMoan = 3								
+					elseif sfxVoiceType == "lick"
+						sfxVoiceId = voice.getLickSound().Play(actorRef)
+					elseif sfxVoiceType == "moan"	; moan
+						sfxPowerOfMoan = 3
+						sfxVoiceId = Voice.GetMoanSound().Play(actorRef)					
+					elseif sfxVoiceType == "suks"	; mouth
+						sfxVoiceId = voice.getSuckSlowSound().Play(actorRef)
+						sfxPowerOfMoan = 3
+					elseif sfxVoiceType == "sukf"	; mouth
+						sfxVoiceId = voice.getSuckFastSound().Play(actorRef)		
+						sfxPowerOfMoan = 3
+					elseif sfxVoiceType == "deep"	; deep mouth
+						sfxVoiceId = voice.getDeepSound().Play(actorRef)
+						sfxPowerOfMoan = 3
+					elseif sfxVoiceType == "kiss"
+						sfxVoiceId = Voice.GetKissSound().Play(actorRef)
+					elseif sfxVoiceType == "orgasm"					
+						if sfxOrgasmStep == 0
+							sfxVoiceId = Voice.GetHappy1Sound().Play(actorRef)
+							sfxVoiceLimit = 5
+							sfxPowerOfMoan = 3
+							sfxOrgasmStep = 1
+						else 
+							sfxVoiceId = Voice.GetOrgasmSound().Play(actorRef)
+							sfxVoiceLimit = 100
+							sfxPowerOfMoan = 4
+						endif					
+					else
+						sfxVoiceId = 0
+					endif
+
+					if sfxVoiceId != 0									
+						Sound.SetInstanceVolume(sfxVoiceId, actorVolume)
+						sfxVoiceOffset = currentTime
+					endif			
+				endif
 			endif
 		else 
 			if !IsSilent && ((currentTime - sfxVoiceOffset) > Utility.RandomInt(3, 5))
@@ -2251,9 +2218,9 @@ state Animating
 		Debug.SendAnimationEvent(ActorRef, "IdleForceDefaultState")
 
 		SyncLocation(true)
-		RunStage()
+		; RunStage()
 		kRefreshActor = true	
-		RegisterForSingleUpdate(1.0)
+		; RegisterForSingleUpdate(1.0)
 	endFunction
 
 	function RefreshLoc()
@@ -2493,6 +2460,21 @@ endState
 ; ------------------------------------------------------- ;
 ; --- alton added                                     --- ;
 ; ------------------------------------------------------- ;
+
+function moveActorToFirstActor ()
+	; 현재 액터가 첫번재 액터와 마주보도록 설정
+	Actor targetActor = Thread.Positions[0]
+	float az = targetActor.GetAngleZ()
+	float distance = 20.0
+
+	if position > 1
+		ActorRef.MoveTo(targetActor, distance * Math.sin(az),   distance * Math.cos(az), 0.0, 0)
+		ActorRef.Disable()
+		ActorRef.SetAngle(0, 0, az + 180)
+		ActorRef.Enable()
+	endif
+endFunction 
+
 function raiseSos (bool slow = false)
 	; 크기 설정
 	if isMale 	
@@ -2578,10 +2560,12 @@ function addSkillPerk ()
 	endif	
 endFunction
 
-function wakeUpAnimating ()
-	if sfxActionType == "wakeup"
-		Debug.SendAnimationEvent(ActorRef, "SP_Getup_0" + Utility.RandomInt(1,2))
+function wakeUpAnimating ()	
+	if sfxActionType == "standFront"		
+		Debug.SendAnimationEvent(ActorRef, "SP_Getup_Front")
 		Utility.Wait(2.0)
-	endif
-
+	elseif sfxActionType == "standBack"				
+		Debug.SendAnimationEvent(ActorRef, "SP_Getup_Back")
+		Utility.Wait(2.0)
+	endif	
 endFunction

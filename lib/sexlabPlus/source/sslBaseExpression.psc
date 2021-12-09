@@ -217,33 +217,33 @@ function ClearMFG(Actor ActorRef) global
 	endIf
 endFunction
 
-function TransitPresetFloats(Actor ActorRef, float[] FromPreset, float[] ToPreset, float Speed = 1.0, float Time = 1.0) global 
-	if !ActorRef || FromPreset.Length < 32 || ToPreset.Length < 32
-		return
-	endIf
-	if Speed < 0.1
-		ApplyPresetFloats(ActorRef, ToPreset)
-		return
-	endIf
-	int n = (10 * Speed) as int
-	int p
-	while p < n
-		float[] Preset = new float[32]
-		int i = Preset.Length
-		while i > 0
-			i -= 1
-			if i > 29
-				Preset[i] = ToPreset[i]
-			else
-				Preset[i] = ((ToPreset[i] - FromPreset[i]) / n) * p + FromPreset[i]
-			endIf
-		endWhile
-		ApplyPresetFloats(ActorRef, Preset)
-		Utility.Wait((Time / 10) / Speed)
-		p += 1
-	endWhile
-	ApplyPresetFloats(ActorRef, ToPreset)
-endFunction
+; function TransitPresetFloats(Actor ActorRef, float[] FromPreset, float[] ToPreset, float Speed = 1.0, float Time = 1.0) global 
+; 	if !ActorRef || FromPreset.Length < 32 || ToPreset.Length < 32
+; 		return
+; 	endIf
+; 	if Speed < 0.1
+; 		ApplyPresetFloats(ActorRef, ToPreset)
+; 		return
+; 	endIf
+; 	int n = (10 * Speed) as int
+; 	int p
+; 	while p < n
+; 		float[] Preset = new float[32]
+; 		int i = Preset.Length
+; 		while i > 0
+; 			i -= 1
+; 			if i > 29
+; 				Preset[i] = ToPreset[i]
+; 			else
+; 				Preset[i] = ((ToPreset[i] - FromPreset[i]) / n) * p + FromPreset[i]
+; 			endIf
+; 		endWhile
+; 		ApplyPresetFloats(ActorRef, Preset)
+; 		Utility.Wait((Time / 10) / Speed)
+; 		p += 1
+; 	endWhile
+; 	ApplyPresetFloats(ActorRef, ToPreset)
+; endFunction
 
 function ApplyPresetFloats(Actor ActorRef, float[] Preset) global 
 	if !ActorRef || Preset.Length < 32

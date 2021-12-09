@@ -185,9 +185,9 @@ Actor[] function FindAnimationPartners(sslBaseAnimation Animation, ObjectReferen
 	endIf
 	
 	Actor[] IncludedActors = sslUtility.MakeActorArray(IncludedRef1, IncludedRef2, IncludedRef3, IncludedRef4)
-	Actor[] Positions = PapyrusUtil.ActorArray(Animation.PositionCount)
+	Actor[] Positions = PapyrusUtil.ActorArray(5)
 	int i
-	while i < Positions.Length
+	while i < Animation.PositionCount
 		; Determine needed gender and race
 		string RaceKey = ""
 		int FindGender = Animation.GetGender(i)
@@ -627,66 +627,6 @@ endFunction
 
 bool function SameFloor(ObjectReference BedRef, float Z, float Tolerance = 15.0)
 	return BedRef && Math.Abs(Z - BedRef.GetPositionZ()) <= Tolerance
-endFunction
-
-ObjectReference function FindBed(ObjectReference CenterRef, float Radius = 1000.0, bool IgnoreUsed = true, ObjectReference IgnoreRef1 = none, ObjectReference IgnoreRef2 = none)
-	if !CenterRef || CenterRef == none || Radius < 1.0
-		return none ; Invalid args
-	endIf
-	; Current elevation to determine bed being on same floor
-	float Z = CenterRef.GetPositionZ()
-	; Search a couple times for a nearby bed on the same elevation first before looking for random
-	ObjectReference BedRef = Game.FindClosestReferenceOfAnyTypeInListFromRef(BedsList, CenterRef, Radius)
-	if !BedRef || (BedRef != IgnoreRef1 && BedRef != IgnoreRef2 && SameFloor(BedRef, Z) && LeveledAngle(BedRef) && CheckBed(BedRef, IgnoreUsed))
-		return BedRef
-	endIf
-	ObjectReference NearRef
-	Form[] Suppressed = new Form[10]
-	Suppressed[9] = BedRef
-	Suppressed[8] = IgnoreRef1
-	Suppressed[7] = IgnoreRef2
-	int LastNull = Suppressed.RFind(none)
-	int i = BedsList.GetSize()
-	while i
-		i -= 1
-		Form BedType = BedsList.GetAt(i)
-		if BedType
-			BedRef = Game.FindClosestReferenceOfTypeFromRef(BedType, CenterRef, Radius)
-			if BedRef && Suppressed.Find(BedRef) == -1
-				if SameFloor(BedRef, Z, 200) && LeveledAngle(BedRef) && CheckBed(BedRef, IgnoreUsed)
-					if (!NearRef || BedRef.GetDistance(CenterRef) < NearRef.GetDistance(CenterRef))
-						NearRef = BedRef
-					endIf
-				elseIf LastNull >= 0
-					Suppressed[LastNull]
-					LastNull = Suppressed.RFind(none)
-				endIf
-			endIf
-		endIf
-	endWhile
-	if NearRef && NearRef != none
-		return NearRef
-	endIf
-;	BedRef = Game.FindRandomReferenceOfAnyTypeInListFromRef(BedsList, CenterRef, Radius)
-;	if !BedRef || (BedRef != IgnoreRef1 && BedRef != IgnoreRef2 && SameFloor(BedRef, Z) && LeveledAngle(BedRef) && CheckBed(BedRef, IgnoreUsed))
-;		return BedRef
-;	endIf
-;	BedRef = Game.FindRandomReferenceOfAnyTypeInListFromRef(BedsList, CenterRef, Radius)
-;	if !BedRef || (BedRef != IgnoreRef1 && BedRef != IgnoreRef2 && SameFloor(BedRef, Z) && LeveledAngle(BedRef) && CheckBed(BedRef, IgnoreUsed))
-;		return BedRef
-;	endIf
-	; Failover to any random useable bed
-	i = LastNull + 1
-	while i
-		i -= 1
-		BedRef = Game.FindRandomReferenceOfAnyTypeInListFromRef(BedsList, CenterRef, Radius)
-		if !BedRef || (Suppressed.Find(BedRef) == -1 && SameFloor(BedRef, Z, Radius * 0.5) && LeveledAngle(BedRef) && CheckBed(BedRef, IgnoreUsed))
-			return BedRef ; Found valid bed or none nearby and we should give up
-		else
-			Suppressed[i] = BedRef ; Add to suppression list
-		endIf
-	endWhile
-	return none ; Nothing found in search loop
 endFunction
 
 ; ------------------------------------------------------- ;
