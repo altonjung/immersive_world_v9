@@ -1132,7 +1132,7 @@ Scriptname PO3_SKSEFunctions Hidden
 	;-------
 		
 	;Applies material shader to reference (doesn't have to be static)
-	Function ApplyMaterialShader(ObjectReference akRef, MaterialObject akMatObject, float directionalThresholdAngle) global native
+	; Function ApplyMaterialShader(ObjectReference akRef, MaterialObject akMatObject, float directionalThresholdAngle) global native
 	
 	;Wrapper function for AddKeywordToForm.
 	Function AddKeywordToRef(ObjectReference akRef, Keyword akKeyword) global native	

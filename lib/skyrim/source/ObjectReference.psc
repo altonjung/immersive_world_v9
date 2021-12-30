@@ -1,5 +1,4 @@
 Scriptname ObjectReference extends Form Hidden
-Import Utility
 
 bool FUNCTION rampRumble(float power = 0.5, float duration = 0.25, float falloff = 1600.0)
 	; Function to shake cam/controller based on distance from player
@@ -833,4 +832,3 @@ Form[] Function GetContainerForms() native
 
 ; Returns all of the aliases holding this reference
 ReferenceAlias[] Function GetReferenceAliases() native
-	

@@ -717,7 +717,7 @@ Function DrawWeapon() native
 ; 0 - not in combat
 ; 1 - in combat
 ; 2 - searching
-Event OnCombatStateChanged(Actor akTarget, int aeCombatState)
+Event OnCombatStateChanged(Actor akTarget, int aeCombatState)	
 EndEvent
 
 ; Event that is triggered when this actor sits in the furniture
@@ -737,23 +737,18 @@ Event OnDying(Actor akKiller)
 EndEvent
 
 ; Event received when an actor enters bleedout.
-Event OnEnterBleedout()
+Event OnEnterBleedout()	
 EndEvent
 
 ; Event that is triggered when this actor changes from one location to another
 Event OnLocationChange(Location akOldLoc, Location akNewLoc)
+	hitCount = 0	
+	biteCount = 0
+	burnCount = 0	
 EndEvent
 
 ; Received when the lycanthropy state of this actor changes (when SendLycanthropyStateChanged is called)
 Event OnLycanthropyStateChanged(bool abIsWerewolf)
-EndEvent
-
-; Event received when this actor equips something - akReference may be None if object is not persistent
-Event OnObjectEquipped(Form akBaseObject, ObjectReference akReference)
-EndEvent
-
-; Event received when this actor unequips something - akReference may be None if object is not persistent
-Event OnObjectUnequipped(Form akBaseObject, ObjectReference akReference)
 EndEvent
 
 ; Event received when this actor starts a new package
@@ -978,3 +973,141 @@ Function ResetExpressionOverrides() native
 
 ; Returns all factions with the specified min and max ranks (-128 to 127) 
 Faction[] Function GetFactions(int minRank, int maxRank) native
+
+; Event received when this actor equips something - akReference may be None if object is not persistent
+Event OnObjectEquipped(Form akBaseObject, ObjectReference akReference)
+EndEvent
+
+; Event received when this actor unequips something - akReference may be None if object is not persistent
+Event OnObjectUnequipped(Form akBaseObject, ObjectReference akReference)
+EndEvent
+
+; Alton
+ImmersiveArmor breakArmor = None
+int hitCount = 0
+int biteCount = 0
+int burnCount = 0
+float lastFireBurnTime = 0.0
+
+Event OnLoad()	
+
+	if !isDead()
+		if breakArmor == None 
+			armorBreakModuleInit()			
+			if breakArmor.isPlayer(self)
+				Debug.Notification("active immersiveArmor on player")
+				gotoState("playerRole")
+			endif
+		endif
+	endif
+EndEvent
+
+Event OnHit(ObjectReference akAggressor, Form akSource, Projectile akProjectile, bool abPowerAttack, bool abSneakAttack, bool abBashAttack, bool abHitBlocked)
+
+	; MiscUtil.PrintConsole("OnHit " + breakArmor + ", name " + self.GetActorBase().GetName())
+
+	if breakArmor
+		Actor aggressor = akAggressor as Actor
+
+		if !abHitBlocked		
+			if abPowerAttack
+				hitCount += 1
+
+				if hitCount > 25
+					breakArmor.handleArmorDrop(self, aggressor, akSource)
+					hitCount = hitCount / 2
+				endif
+			elseif aggressor.HasKeyWordString("ActorTypeGiant")
+				hitCount += 1
+
+				if hitCount > 3
+					breakArmor.handleArmorDrop(self, aggressor, akSource)			
+					hitCount = hitCount / 2
+				endif
+			elseif aggressor.HasKeyWordString("ActorTypeAnimal")
+				biteCount += 1
+
+				if biteCount > 10
+					breakArmor.handleArmorBurn(self, aggressor, akSource)
+					biteCount = biteCount / 2
+				endif
+			elseif  checkFireSpell(akSource)
+				float currentTime = Utility.GetCurrentRealTime()	
+				; 이전 불 데이지를 받은 상태에서 10초 이하로 다시 불 데미지를 받는 경우 burnCount 1 증가
+				if (currentTime - lastFireBurnTime) < 10
+					burnCount += 1
+				else
+					if  burnCount != 0
+						burnCount -= 1
+					endif
+				endif
+				
+				lastFireBurnTime = currentTime
+
+				if burnCount > 10
+					breakArmor.handleArmorBurn(self, aggressor, akSource)
+					burnCount = burnCount / 2
+				endif
+			endif
+		endif
+	endif
+EndEvent
+
+bool function checkFireSpell(form _akSource)
+	Spell magicSpell = _akSource as spell
+	MagicEffect[] magicEffects = magicSpell.GetMagicEffects()
+
+	int idxx=0
+	while idxx < magicEffects.length
+		; 불 데미지라면 옷이 불에탐
+		if magicEffects[idxx].HasKeyWordString("MagicDamageFire")
+			return true
+		endif
+		idxx += 1
+	endwhile
+
+	return false
+endfunction
+
+state playerRole	
+	Event OnObjectEquipped(Form akBaseObject, ObjectReference akReference)
+		Armor _armor = akBaseObject as armor
+		if _armor.IsClothingBody()
+			self.RemoveFromFaction(breakArmor.getFactionBanditFriend())
+			self.RemoveFromFaction(breakArmor.getFactionCreatureFriend())
+			if breakArmor.isBanditArmor(_armor)
+				Debug.Notification("you treated as bandit")
+				self.AddToFaction(breakArmor.getFactionBanditFriend())
+			elseif breakArmor.isForswornArmor(_armor)
+				Debug.Notification("you treated as animal")
+				self.AddToFaction(breakArmor.getFactionCreatureFriend())
+			endif		
+			UnregisterForUpdate()				
+		endif
+	EndEvent
+
+	Event OnObjectUnequipped(Form akBaseObject, ObjectReference akReference)	
+		Armor _armor = akBaseObject as armor
+		if _armor.IsClothingBody()
+			UnregisterForUpdate()
+			RegisterForSingleUpdate(5.0) ; 5초 뒤
+		endif
+	EndEvent
+
+	event OnUpdate()
+		if breakArmor.isWornHalfNakedArmor(self)
+			Debug.Notification("you naked!.. be careful")
+			self.AddToFaction(breakArmor.getFactionBanditFriend())
+			; self.AddToFaction(breakArmor.getFactionCreatureFriend())
+		endif
+	endEvent
+
+	Event OnPlayerLoadGame()		
+		Sound.SetInstanceVolume(breakArmor.getIntroSound().Play(self), 0.8)
+	EndEvent
+
+endState
+
+function armorBreakModuleInit()
+	breakArmor =  (Game.GetFormFromFile(0x05005900, "ImmersiveArmor.esp") As ImmersiveArmor)
+endfunction
