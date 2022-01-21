@@ -1,13 +1,13 @@
 scriptname ImmersivePcVoiceActionActorAlias extends ReferenceAlias
 
 string prevMenuAction
-bool   isMenu
+
+Actor  overHeadDialogActor
 
 int    LockPickBgSoundId
 int    playerCrimeGold
 
 float  drunkenStartTime
-float  soundCoolTime
 Faction possibleCrimeFaction	
 int    possibleCrimeGold
 float[] coolTimeMap
@@ -20,6 +20,7 @@ Event OnInit()
 EndEvent
 
 event OnLoad()
+	LOG("Action load..")
 	registerAction()	
 	setup()
 	init()
@@ -33,6 +34,7 @@ EndEvent
 function initMenu()	
 	UnregisterForAllMenus()
 	RegisterForMenu("MapMenu")	
+	RegisterForMenu("Dialogue Menu")	
 	RegisterForMenu("Journal Menu")
 	RegisterForMenu("ContainerMenu")
 	RegisterForMenu("Lockpicking Menu")
@@ -45,21 +47,28 @@ endFunction
 
 function setup()
 	prevMenuAction = ""
-	isMenu = false
 endFunction
 
 function init ()		
+	overHeadDialogActor = None
 	runningCoolTimeSoundRes = None
 	runningCoolTimeSoundVolume = 0.0
 	possibleCrimeGold = 0	
 	LockPickBgSoundId = 0
-	soundCoolTime = 0.0	
-	coolTimeMap = new float[15] ; 0: normal, 1: dialog(child), 2: dialog(enemy), 3: dialog(lover), 4: dialog(friend), 5: dialog(soldier), 9: harvest
+	coolTimeMap = new float[15] 
 endFunction
 
 function regAnimation ()
 	; key
 	RegisterForControl("Activate")	
+	
+	; weapon/bow
+	RegisterForAnimationEvent(playerRef, "weaponSwing")
+	RegisterForAnimationEvent(playerRef, "weaponLeftSwing")
+
+	; weapon
+	RegisterForAnimationEvent(playerRef, "weaponDraw")
+	; RegisterForAnimationEvent(playerRef, "weaponSheathe")	
 
 	; ride
 	RegisterForAnimationEvent(playerRef, "SoundPlay.NPCHorseMount") 	
@@ -71,74 +80,95 @@ function regAnimation ()
 endFunction
 
 Event OnControlDown(string control)
-	ObjectReference akObj = Game.GetCurrentCrosshairRef() 
+	overHeadDialogActor = None
+	ObjectReference akObj = Game.GetCurrentCrosshairRef()
 	Actor akActor = akObj as Actor
+
 	; player와 대화 대상 찾기
-	If akActor != none			
+	If akActor != none					
 		if akActor.isDead() || akActor.IsUnconscious()
 			if !akActor.HasKeyWordString("ActorTypeCreature")
-				SoundCoolTimePlay(SayActionSearchDeadBodySound, _volume=0.3, _delay=0.2, _coolTime=1.5, _mapIdx=0, _mapCoolTime=1.5)
+				SoundCoolTimePlay(SayActionSearchDeadBodySound, _volume=0.3, _delay=0.0, _coolTime=1.5, _mapIdx=0, _mapCoolTime=1.5)
 			endif			
-			expression("sad")			
-		else 			
-			if PlayerRef.IsInCombat()
-				if !akActor.HasKeyWordString("ActorTypeCreature")
+			expression("sad")
+		else
+			if akActor.HasKeyWordString("ActorTypeNPC")
+				overHeadDialogActor = akActor
+				if PlayerRef.IsInCombat()				
 					if playerRef.IsHostileToActor(akActor)
-						SoundCoolTimePlay(SayActionDialogueAggressiveSound, _delay=0.2, _coolTime=3.0, _mapIdx=3, _mapCoolTime=5.0)
+						SoundCoolTimePlay(SayActionDialogueAggressiveSound, _coolTime=2.0, _mapIdx=3, _mapCoolTime=5.0)
 					else 
-						if akActor.isChild()	
-							SoundCoolTimePlay(SayActionDialogueWarnChildSound, _delay=0.2, _coolTime=3.0, _mapIdx=2, _mapCoolTime=5.0)
+						if akActor.isChild()
+							SoundCoolTimePlay(SayActionDialogueWarnBattleChildSound, _coolTime=2.0, _mapIdx=2, _mapCoolTime=5.0)
 							expression("sad")
 						else
-							SoundCoolTimePlay(SayActionDialogueWarnSound, _delay=0.2, _coolTime=3.0, _mapIdx=5, _mapCoolTime=5.0)
+							SoundCoolTimePlay(SayActionDialogueWarnBattleSound,  _coolTime=2.0, _mapIdx=5, _mapCoolTime=5.0)
 							expression("sad")
 						endif
-					endif					
-				endif
-			else 
-				if !akActor.HasKeyWordString("ActorTypeCreature")
-					if PlayerDrunkState.getValue() > 0
-						SoundCoolTimePlay(SayActionDialogueDrunkSound, _delay=0.2, _coolTime=3.0, _mapIdx=1, _mapCoolTime=10.0)
-						expression("happy")		
-					else 						
-						int dialogueActorRelationShip = playerRef.GetRelationshipRank(akActor)
-						log ("found actor with relation " + dialogueActorRelationShip)
-						if dialogueActorRelationShip < 0 ;적과 이야기 시 적대적 대화 주고받기
-							SoundCoolTimePlay(SayActionDialogueNormalEnemySound, _delay=0.2, _coolTime=3.0, _mapIdx=4, _mapCoolTime=30.0)
-							expression("angry")		
-						elseif dialogueActorRelationShip == 0 ; 모르는 대상과 인사 주고 받기														
-							if akActor.IsGuard() || akActor.getFactionRank(CWDialogueSoldierFaction) > -1 ; guard or soldier
-								SoundCoolTimePlay(SayActionDialogueNormalSoldierSound, _delay=0.2, _coolTime=3.0, _mapIdx=7, _mapCoolTime=15.0)
-								expression("reset")
-							elseif akActor.isChild() 	; 아이
-								SoundCoolTimePlay(SayActionDialogueNormalChildSound, _delay=0.2, _coolTime=3.0, _mapIdx=3, _mapCoolTime=15.0)
-								expression("happy")
-							elseif akActor.IsGhost()	; 귀신
-								SoundCoolTimePlay(SayActionDialogueNormalGhostSound, _delay=0.2, _coolTime=3.0, _mapIdx=8, _mapCoolTime=30.0)
-								expression("happy")								
-							else
-								Armor _armor = akActor.GetWornForm(0x00000004) as Armor
-								if _armor.IsClothingRich()
-									SoundCoolTimePlay(SayActionDialogueNormalNobleSound, _delay=0.2, _coolTime=3.0, _mapIdx=9, _mapCoolTime=30.0)	
-									expression("reset")								
-								elseif _armor.IsClothingPoor() || (akActor.GetRace() == OrcRace || akActor.GetRace() == FalmerRace)
-									SoundCoolTimePlay(SayActionDialogueNormalUglySound, _delay=0.2, _coolTime=3.0, _mapIdx=10, _mapCoolTime=30.0)								
-									expression("angry")
-								else
-									SoundCoolTimePlay(SayActionDialogueNormalSound, _delay=0.2, _coolTime=3.0, _mapIdx=2, _mapCoolTime=30.0)	
-									expression("reset")
-								endif
-							endif
-						elseif dialogueActorRelationShip <= 3 ; friend
-							SoundCoolTimePlay(SayActionDialogueNormalFriendSound, _delay=0.2, _coolTime=3.0, _mapIdx=6, _mapCoolTime=30.0)	
-							expression("happy")
-						elseif dialogueActorRelationShip == 4 ; lover
-							SoundCoolTimePlay(SayActionDialogueNormalLoverSound, _delay=0.2, _coolTime=3.0, _mapIdx=5, _mapCoolTime=30.0)	
-							expression("happy")
-						endif
 					endif
-				endif
-			endif			
+				else
+
+					int dialogueActorRelationShip = playerRef.GetRelationshipRank(akActor)
+					Armor _ActorArmor = akActor.GetWornForm(0x00000004) as Armor
+					; 강제로 hostile 대상으로 만들기
+					if playerRef.IsHostileToActor(akActor) && dialogueActorRelationShip >= 0
+						dialogueActorRelationShip = -1
+					endif
+
+					if akActor.isChild() 	; 아이
+						SoundCoolTimePlay(SayActionDialogueNormalChildSound, _coolTime=2.0, _mapIdx=3, _mapCoolTime=15.0)
+						expression("happy")
+					elseif akActor.IsGhost(); 귀신
+						SoundCoolTimePlay(SayActionDialogueNormalGhostSound, _coolTime=2.0, _mapIdx=8, _mapCoolTime=15.0)
+						expression("happy")
+					elseif 	_ActorArmor == None ; 타인이 벗은 상태
+						SoundCoolTimePlay(SayActionDialogueWarnNakedSound, _coolTime=2.0, _mapIdx=10, _mapCoolTime=15.0)			
+						akActor.SendAssaultAlarm()
+					elseif akActor.IsGuard() || akActor.getFactionRank(CWDialogueSoldierFaction) > -1 ; 병사
+						SoundCoolTimePlay(SayActionDialogueNormalSoldierSound, _coolTime=2.0, _mapIdx=7, _mapCoolTime=15.0)
+						expression("reset")					
+					elseif PlayerNakeState.getValue() == 1.0 ; 주인공이 벗은상태
+						if akActor.getFactionRank(BanditFaction) > -1
+							SoundCoolTimePlay(SayActionDialogueShyNakeOnBanditSound,  _coolTime=2.0, _mapIdx=4, _mapCoolTime=15.0)
+						else 
+							SoundCoolTimePlay(SayActionDialogueShyNakeSound,  _coolTime=2.0, _mapIdx=4, _mapCoolTime=15.0)
+						endif
+						expression("sad")	
+					elseif dialogueActorRelationShip < 0 ; 적
+						SoundCoolTimePlay(SayActionDialogueNormalEnemySound,  _coolTime=2.0, _mapIdx=4, _mapCoolTime=15.0)
+						expression("angry")										
+					elseif dialogueActorRelationShip == 0 ; 모르는 대상과 인사 주고 받기
+						if _ActorArmor.IsClothingRich()
+							if GetGender(akActor) == 1 ; female
+								SoundCoolTimePlay(SayActionDialogueEnvyBeautySound, _coolTime=2.0, _mapIdx=9, _mapCoolTime=15.0)
+							else 
+								SoundCoolTimePlay(SayActionDialogueNormalNobleSound, _coolTime=2.0, _mapIdx=9, _mapCoolTime=15.0)
+							endif
+							expression("reset")								
+						elseif _ActorArmor.IsClothingPoor()
+							SoundCoolTimePlay(SayActionDialogueShyNakeSound, _coolTime=2.0, _mapIdx=10, _mapCoolTime=15.0)
+							expression("angry")
+						else 
+							SoundCoolTimePlay(SayActionDialogueNormalSound,  _coolTime=2.0, _mapIdx=2, _mapCoolTime=15.0)
+							expression("reset")
+						endif												
+					elseif dialogueActorRelationShip ==  2 ; friend
+						SoundCoolTimePlay(SayActionDialogueNormalFriendSound, _coolTime=2.0, _mapIdx=6, _mapCoolTime=15.0)
+						expression("happy")
+					elseif dialogueActorRelationShip ==  3 ; ally (follower)
+						SoundCoolTimePlay(SayActionDialogueNormalFollowerSound, _coolTime=2.0, _mapIdx=11, _mapCoolTime=15.0)
+						expression("happy")						
+					elseif dialogueActorRelationShip == 4 ; lover
+						float currentHour = Utility.GetCurrentGameTime() * 24.0
+						if currentHour < 6 || currentHour > 21
+							SoundCoolTimePlay(SayActionDialogueNormalLoverLoveSound, _coolTime=2.0, _mapIdx=5, _mapCoolTime=15.0)
+						else 
+							SoundCoolTimePlay(SayActionDialogueNormalLoverSound, _coolTime=2.0, _mapIdx=5, _mapCoolTime=15.0)
+						endif
+						expression("happy")
+					endif
+				endif		
+			endif
 		endif
 	else 
 		; 물건
@@ -177,6 +207,10 @@ EndEvent
 
 ; Event that is triggered when this actor sits in the furniture
 Event OnSit(ObjectReference akFurniture)	
+	if playerRef.IsInCombat()
+		return
+	endif 
+
 	bool isTable = false 		
 
 	if akFurniture.HasKeywordString("CraftingCookpot")
@@ -188,7 +222,7 @@ Event OnSit(ObjectReference akFurniture)
 	elseif akFurniture.HasKeywordString("CraftingSmithingArmorTable")
 		log("Smithing ArmorTable")		
 	elseif akFurniture.HasKeywordString("CraftingSmithingSharpeningWheel")
-		log("Smithing Sharpen")		
+		log("Smithing Sharpen")
 	elseif akFurniture.HasKeywordString("BYOHCarpenterTable")
 		log("carpenter")
 	elseif akFurniture.HasKeywordString("isGrainMill")
@@ -215,7 +249,7 @@ Event OnSit(ObjectReference akFurniture)
 	endif
 
 	if isTable
-		if PlayerNakeState.getValue() == 1
+		if PlayerNakeState.getValue() == 1.0
 			SoundCoolTimePlay(SayActionSitNakedSound, _delay=0.2, _coolTime=3.0, _mapIdx=0, _mapCoolTime=3.0)
 		else
 			SoundCoolTimePlay(SayActionSitSound, _delay=0.2, _coolTime=3.0, _mapIdx=0, _mapCoolTime=3.0)
@@ -235,55 +269,91 @@ EndEvent
 ;	Menu
 ;
 Event OnMenuOpen(string menuName)
-	log("OnMenuOpen " + menuName)
-
-	isMenu = true	
+	; log("OnMenuOpen " + menuName)
+	
 	prevMenuAction = ""
 
 	if menuName == "MapMenu"		
-		SoundPlay(SayActionTravelSound, _volume=0.5)		
-	elseif menuName == "BarterMenu"
-		prevMenuAction = "barter"
+		SoundPlay(SayActionTravelSound, _volume=0.5)
+	elseif menuName == "Dialogue Menu"
+		; passive dialogue
+		Actor akActor  = playerRef.GetDialogueTarget()		
+
+		if akActor
+			if overHeadDialogActor != akActor
+				; log("passive dialogue")
+				if playerRef.IsHostileToActor(akActor)
+					SoundCoolTimePlay(SayActionDialogueAggressiveSound, _delay=0.5, _coolTime=2.0, _mapIdx=3, _mapCoolTime=10.0)
+					expression("angry")
+				else 
+					if akActor.IsGuard() || akActor.getFactionRank(CWDialogueSoldierFaction) > -1 ; guard or soldier
+						SoundCoolTimePlay(SayActionDialogueNormalSoldierSound, _delay=0.5, _coolTime=2.0, _mapIdx=7, _mapCoolTime=15.0)
+						expression("reset")
+					elseif PlayerNakeState.GetValue() == 1.0		
+						SoundCoolTimePlay(SayActionDialoguePassiveNakedSound, _delay=0.5, _coolTime=2.0, _mapIdx=2, _mapCoolTime=10.0)
+						expression("sad")
+					elseif PlayerDrunkState.GetValue() == 1.0						
+						SoundCoolTimePlay(SayActionDialoguePassiveDrunkSound, _delay=0.5, _coolTime=2.0, _mapIdx=2, _mapCoolTime=10.0)
+						expression("happy")
+					else 
+						SoundCoolTimePlay(SayActionDialoguePassiveSound,_delay=0.5, _coolTime=2.0, _mapIdx=2, _mapCoolTime=10.0)	
+						expression("happy")
+					endif					
+				endif
+			endif
+		endif
+		
+		overHeadDialogActor = None
 	elseif menuName == "ContainerMenu"
 		; lockpick -> container
 		if prevMenuAction == "lockpick"
-			SoundPlay(SayActionSuccessSound,  _volume=0.5)
+			SoundPlay(SayActionSuccessSound,  _volume=0.7)
 		endif
 	elseif menuName == "Lockpicking Menu"
 		Sound.StopInstance(LockPickBgSoundId)		
-		LockPickBgSoundId = SoundBGPlay(SayBgSneakModeSound, 0.5)
+		LockPickBgSoundId = SoundBGPlay(SayBgSneakModeSound, 0.7)
 		prevMenuAction = "lockpick"
 		log("try lockpick")
 	elseif menuName == "Sleep/Wait Menu"		
 		if playerRef.GetSleepState() == 3
-			SoundPlay(SayActionSleepSound, _volume=0.5)
-			prevMenuAction = "sleep"
+			SoundPlay(SayActionSleepSound, _volume=0.7)
 		else 
-			SoundPlay(SayActionWaitSound, _volume=0.5)	
+			SoundPlay(SayActionWaitSound, _volume=0.7)	
 		endif
 	endif
 endEvent
 
-Event OnMenuClose(string menuName)		
-	log("OnMenuClose")
+Event OnMenuClose(string menuName)
+	; log("OnMenuClose")
 
 	if menuName == "Lockpicking Menu"
 		Sound.StopInstance(LockPickBgSoundId)
 		LockPickBgSoundId = 0		
 	elseif menuName == "Sleep/Wait Menu"
 		Game.FadeOutGame(false, true, 0.5, 3.0)
-	endif
-	isMenu = false
+	endif	
 endEvent
 
 ;
 ;	Doom Stone touch
 ;
 Event OnMagicEffectApply(ObjectReference akCaster, MagicEffect akEffect)
-	log("OnMagicEffectApply")
+	if playerRef.IsInCombat()
+		return
+	endif 
+
+	; log("OnMagicEffectApply")
 	if akEffect.HasKeyWordString("StoneDoomEffect")		; doom
-		SoundCoolTimePlay(SayActionRitualSound,_delay=0.2, _coolTime=3.0, _mapIdx=0, _mapCoolTime=3.0)
 		Log("doom")		
+		if akEffect.HasKeyWordString("StoneDoomMaraEffect")		; doom
+			SoundCoolTimePlay(SayActionRitualMaraSound,_delay=0.2, _coolTime=3.0, _mapIdx=0, _mapCoolTime=3.0)
+		elseif akEffect.HasKeyWordString("StoneDoomTalosEffect")		; doom
+			SoundCoolTimePlay(SayActionRitualMaraSound,_delay=0.2, _coolTime=3.0, _mapIdx=0, _mapCoolTime=3.0)
+		elseif akEffect.HasKeyWordString("StoneDoomDebellaEffect")		; doom
+			SoundCoolTimePlay(SayActionRitualDebellaSound,_delay=0.2, _coolTime=3.0, _mapIdx=0, _mapCoolTime=3.0)
+		else 
+			SoundCoolTimePlay(SayActionRitualSound,_delay=0.2, _coolTime=3.0, _mapIdx=0, _mapCoolTime=3.0)
+		endif
 	endif
 EndEvent
 
@@ -298,10 +368,14 @@ endEvent
 ;
 ;	Utility
 ;
-function SoundCoolTimePlay(Sound _sound, float _volume = 0.5, float _coolTime = 1.0, float _delay = 0.0, int _mapIdx = 0, float _mapCoolTime = 1.0)
+function SoundCoolTimePlay(Sound _sound, float _volume = 0.8, float _coolTime = 1.0, float _delay = 0.0, int _mapIdx = 0, float _mapCoolTime = 1.0)
+	if pcVoiceMCM.enableActionSound == false || playerRef.IsSwimming()
+		return
+	endif 
+
 	float currentTime = Utility.GetCurrentRealTime()
-	if !playerRef.IsSwimming() && currentTime >= soundCoolTime && currentTime >= coolTimeMap[_mapIdx]	&& !playerRef.IsSwimming()		 
-		soundCoolTime = currentTime + _coolTime
+	if currentTime >= soundCoolTime.GetValue() && currentTime >= coolTimeMap[_mapIdx]		 
+		soundCoolTime.setValue(currentTime + _coolTime)
 		coolTimeMap[_mapIdx] = currentTime + _mapCoolTime
 		if _delay != 0
 			UnregisterForUpdate()
@@ -317,33 +391,45 @@ function SoundCoolTimePlay(Sound _sound, float _volume = 0.5, float _coolTime = 
 	endif
 endFunction
 
-function SoundPlay(Sound _sound, float _volume = 0.6)	
-	if !playerRef.IsSwimming()		
-		Sound.SetInstanceVolume(_sound.Play(playerRef), _volume)
-	endif
+function SoundPlay(Sound _sound, float _volume = 0.8)	
+	if pcVoiceMCM.enableActionSound == false || playerRef.IsSwimming()
+		return
+	endif 
+	
+	Sound.SetInstanceVolume(_sound.Play(playerRef), _volume)
 endFunction
 
 int function SoundBGPlay(Sound _sound, float _volume = 0.8)
 	int soundId = 0
-	
-	if !playerRef.IsSwimming()
-		soundId = _sound.Play(playerRef)
-		Sound.SetInstanceVolume(soundId, _volume)
-	endif
+
+	if pcVoiceMCM.enableActionSound == false || playerRef.IsSwimming()
+		return soundId
+	endif 
+
+	soundId = _sound.Play(playerRef)
+	Sound.SetInstanceVolume(soundId, _volume)
 	return soundId
 endFunction
 
 function expression(string _type)
 	if _type == "happy"
 		playerRef.SetExpressionOverride(2, 70)				; happy
-	elseif _type == "sad"		
+	elseif _type == "sad"
 		playerRef.SetExpressionOverride(3, 70)				; sad
 	elseif _type == "angry"
 		playerRef.SetExpressionOverride(6, 70)				; angry
-	else 
+	else
 		MfgConsoleFunc.ResetPhonemeModifier(playerRef)		; reset		
-	endif	
+	endif
 endfunction 
+
+int function GetGender(Actor ActorRef) global
+	if ActorRef
+		ActorBase BaseRef = ActorRef.GetLeveledActorBase()
+		return BaseRef.GetSex() ; Default
+	endIf
+	return 0 ; Invalid actor - default to male for compatibility
+endFunction
 
 function Log(string _msg)
 	MiscUtil.PrintConsole(_msg)
@@ -359,6 +445,9 @@ function LogKeywords(Keyword[] _keywords)
 	log("keywords " + _buf)
 endFunction
 
+ImmersivePcVoiceMCM property pcVoiceMCM Auto
+
+GlobalVariable property soundCoolTime Auto
 GlobalVariable property PlayerNakeState Auto
 GlobalVariable property PlayerDrunkState Auto
 
@@ -379,23 +468,38 @@ Sound property SayActionRidingSound Auto
 Sound property SayActionSearchDeadBodySound Auto
 Sound property SayActionSneakSound Auto
 Sound property SayActionSuccessSound Auto
-Sound property SayActionRitualSound Auto
 
-Sound property SayActionDialogueDrunkSound Auto		
+Sound property SayActionRitualSound Auto
+Sound property SayActionRitualMaraSound Auto
+Sound property SayActionRitualTalosSound Auto
+Sound property SayActionRitualDebellaSound Auto
 
 Sound property SayActionDialogueAggressiveSound Auto
 
-Sound property SayActionDialogueWarnSound Auto		
-Sound property SayActionDialogueWarnChildSound Auto
+Sound property SayActionDialoguePassiveSound Auto
+Sound property SayActionDialoguePassiveNakedSound Auto
+Sound property SayActionDialoguePassiveDrunkSound Auto
+
+Sound property SayActionDialogueEnvyBeautySound Auto
+
+Sound property SayActionDialogueWarnNakedSound Auto
+
+Sound property SayActionDialogueWarnBattleSound Auto
+Sound property SayActionDialogueWarnBattleChildSound Auto
+
+Sound property SayActionDialogueShyNakeSound Auto
+
+Sound property SayActionDialogueShyNakeOnBanditSound Auto
 
 Sound property SayActionDialogueNormalSound Auto		
 Sound property SayActionDialogueNormalChildSound Auto
 Sound property SayActionDialogueNormalGhostSound Auto
 Sound property SayActionDialogueNormalEnemySound Auto			
 Sound property SayActionDialogueNormalLoverSound Auto
+Sound property SayActionDialogueNormalLoverLoveSound Auto
 Sound property SayActionDialogueNormalFriendSound Auto
+Sound property SayActionDialogueNormalFollowerSound Auto
 Sound property SayActionDialogueNormalSoldierSound Auto
-Sound property SayActionDialogueNormalUglySound Auto
 Sound property SayActionDialogueNormalNobleSound Auto
 
 ; sneak background
@@ -406,7 +510,4 @@ Sound property SayDefaultSound Auto
 
 ; Faction
 Faction property CWDialogueSoldierFaction Auto
-Race    property OrcRace Auto
-Race    property FalmerRace Auto
-
-
+Faction property BanditFaction Auto

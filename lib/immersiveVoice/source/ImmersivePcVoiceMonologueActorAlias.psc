@@ -10,7 +10,6 @@ int    SneakBgSoundId
 
 bool   isLoadLocationChanged
 string visitLocation
-float  soundCoolTime
 float[] coolTimeMap
 
 Sound  runningCoolTimeSoundRes
@@ -30,15 +29,12 @@ endEvent
 function initMenu()	
 	UnregisterForAllMenus()
 	RegisterForMenu("RaceSex Menu")
-	RegisterForMenu("InventoryMenu")
 endFunction
 
 ; save -> load 시 호출
 Event OnPlayerLoadGame()	
-	log("OnPlayerLoadGame!!")
 	isGameRunning = false
-	SoundHelloPlay(SayHelloSound)
-	expression("happy")	
+	SoundHelloPlay(SayHelloSound)	
 	utility.WaitMenuMode(3.0)
 	isGameRunning = true
 	init()
@@ -54,6 +50,7 @@ function setup()
 		
 	visitLocation = ""	
 	visitLocation = checkLocation(playerRef.GetCurrentLocation())
+
 endFunction
 
 function init ()	
@@ -68,7 +65,7 @@ function init ()
 	SneakBgSoundId = 0
 	sneakingBgSoundVolume = 0.0
 
-	soundCoolTime = 0.0	
+	soundCoolTime.SetValue(0.0)
 	coolTimeMap = new float[20]
 	;	0: normal, 1: drunk, 2: dialog(normal), 3: dialog(child), 4: dialog(enemy), 5: dialog(lover), 6: dialog(friend), 7: dialog(soldier) 8: dialogu(ghost), 9: dialogu(noble), 10: dialogu(ugly), 13: swimming
 endFunction
@@ -134,9 +131,6 @@ Event OnMenuOpen(string menuName)
 	if menuName == "RaceSex Menu"			
 		isGameRunning = false
 		SoundHelloPlay(SayHelloSound)	
-		expression("happy")
-	elseif menuName == "InventoryMenu"
-		UnregisterForUpdate()
 	endif
 endEvent
 
@@ -185,7 +179,7 @@ EndEvent
 ;	Drink
 ;
 Event OnMagicEffectApply(ObjectReference akCaster, MagicEffect akEffect)
-	log("OnMagicEffectApply")
+	; log("OnMagicEffectApply")
 	if akEffect.HasKeyWordString("MagicAlchBeneficial")	&& (akEffect.HasKeyWordString("MagicAlchRestoreHealth") || akEffect.HasKeyWordString("MagicAlchRestoreMagicka") || akEffect.HasKeyWordString("MagicAlchRestoreStamina"))
 		SoundCoolTimePlay(SayDrinkPotionSound, _coolTime=3.0, _mapIdx=3, _mapCoolTime=3.0)
 		; Log("Drink H/M/S potion")
@@ -201,11 +195,8 @@ EndEvent
 ;	Location
 ;
 Event OnLocationChange(Location akOldLoc, Location akNewLoc)
-	
-	bool isCombat = playerRef.IsInCombat()
-	log("OnLocationChange " + isCombat)
-
-	if isCombat
+	; log("OnLocationChange " + isCombat)
+	if playerRef.IsInCombat()
 		return
 	endif 
 
@@ -217,10 +208,15 @@ Event OnLocationChange(Location akOldLoc, Location akNewLoc)
 	int _weatherType = Weather.GetCurrentWeather().GetClassification()
 
 	if isGameRunning
-		if 30.0 <= playerRef.GetActorValue("Stamina") 
-			if PlayerNakeState.getValue() == 1
-				SoundCoolTimePlay(SayStateNakedSound, _coolTime=3.0, _mapIdx=0, _mapCoolTime=60.0)
-			elseif PlayerDrunkState.getValue() == 1
+		if 50.0 <= playerRef.GetActorValue("Stamina")
+			if PlayerNakeState.getValue() == 1.0
+				Location currentLocation = playerRef.GetCurrentLocation()
+				visitLocation = checkLocation(currentLocation)
+
+				if visitLocation != "home"
+					SoundCoolTimePlay(SayStateNakedSound, _coolTime=3.0, _mapIdx=0, _mapCoolTime=60.0)
+				endif
+			elseif PlayerDrunkState.getValue() == 1.0
 				Game.ShakeCamera(afDuration = 1.0)
 				SoundCoolTimePlay(SayDrinkAlcoholToxicSound, _coolTime=3.0, _mapIdx=0, _mapCoolTime=60.0)
 			elseif playerRef.GetActorValue("Health") <= 0.3		; low health
@@ -314,71 +310,10 @@ String function checkLocation(Location _location)
 		endif
 	endif
 
-	LogKeywords(_location.GetKeywords())
+	; LogKeywords(_location.GetKeywords())
 
 	return _visitLocation
 endFunction 
-
-;
-;	equip
-;
-; InventoryMenu가 아닌 npc나 console 을 통해, 임의적으로 clothes가 off된 경우 처리
-Event OnObjectEquipped(Form akBaseObject, ObjectReference akReference)
-	Armor _armor = akBaseObject as armor
-	
-	Armor _wornArmor = playerRef.GetWornForm(0x00000004) as Armor		; armor
-	Armor _wornPanty = playerRef.GetWornForm(0x00400000) as Armor		; panty
-	Armor _wornShoes = playerRef.GetWornForm(0x00000080) as Armor		; shoes
-	Armor _wornShortHair = playerRef.GetWornForm(0x00000002) as Armor	; hair short
-	Armor _wornLongHair = playerRef.GetWornForm(0x00000800) as Armor	; hair long
-
-	if _armor == _wornArmor || _armor == _wornPanty
-		clearNaked()
-		if _wornPanty
-			SoundCoolTimePlay(SayReactionPantyClothSound, _delay=1.0, _coolTime=2.0, _mapIdx=0, _mapCoolTime=2.0)
-			expression("happy")
-		else 
-			if _armor.HasKeyWordString("ClothingSlutty")
-				SoundCoolTimePlay(SayReactionSluttyClothSound, _delay=1.0, _coolTime=2.0, _mapIdx=0, _mapCoolTime=2.0)
-				expression("angry")
-			elseif _armor.HasKeyWordString("ClothingSexy")
-				SoundCoolTimePlay(SayReactionSexyClothSound, _delay=1.0, _coolTime=2.0, _mapIdx=0, _mapCoolTime=2.0)
-				expression("happy")
-			elseif _armor.HasKeyWordString("ClothingPoor")
-				SoundCoolTimePlay(SayReactionPoorClothSound, _delay=1.0, _coolTime=2.0, _mapIdx=0, _mapCoolTime=2.0)
-				expression("angry")
-			elseif _armor.HasKeyWordString("ClothingRich")
-				SoundCoolTimePlay(SayReactionFancyClothSound, _delay=1.0, _coolTime=2.0, _mapIdx=0, _mapCoolTime=2.0)
-				expression("happy")
-			elseif _armor.HasKeyWordString("ClothingPanty")
-				SoundCoolTimePlay(SayReactionPantyClothSound, _delay=1.0, _coolTime=2.0, _mapIdx=0, _mapCoolTime=2.0)
-				expression("happy")
-			endif
-		endif		
-	elseif _armor == _wornShoes
-		if _armor.HasKeyWordString("ArmorHeels")
-			SoundCoolTimePlay(SayReactionHeelsSound, _delay=1.0, _coolTime=2.0, _mapIdx=0, _mapCoolTime=2.0)
-			expression("happy")
-		endif
-	elseif _armor == _wornShortHair || _armor == _wornLongHair
-		if _armor.HasKeyWordString("HairStyleBold")
-			SoundCoolTimePlay(SayReactionBoldHairSound, _delay=1.0, _coolTime=2.0, _mapIdx=0, _mapCoolTime=2.0)
-			expression("angry")
-		elseif _armor.HasKeyWordString("HairStyleLong")
-			SoundCoolTimePlay(SayReactionLongHairSound, _delay=1.0, _coolTime=2.0, _mapIdx=0, _mapCoolTime=2.0)
-			expression("happy")
-		elseif _armor.HasKeyWordString("HairStyleShort")
-			SoundCoolTimePlay(SayReactionShortHairSound, _delay=1.0, _coolTime=2.0, _mapIdx=0, _mapCoolTime=2.0)
-			expression("happy")
-		elseif _armor.HasKeyWordString("HairStyleBang")
-			SoundCoolTimePlay(SayReactionBangHairSound, _delay=1.0, _coolTime=2.0, _mapIdx=0, _mapCoolTime=2.0)
-			expression("happy")
-		elseif _armor.HasKeyWordString("HairStylePony")
-			SoundCoolTimePlay(SayReactionPonyHairSound, _delay=1.0, _coolTime=2.0, _mapIdx=0, _mapCoolTime=2.0)
-			expression("happy")
-		endif
-	endif
-EndEvent
 
 ;
 ;	Trade
@@ -476,10 +411,14 @@ function playLocationSound(int skyMode)
 	endif
 endFunction
 
-function SoundCoolTimePlay(Sound _sound, float _volume = 0.5, float _coolTime = 1.0, float _delay = 0.0, int _mapIdx = 0, float _mapCoolTime = 1.0)
+function SoundCoolTimePlay(Sound _sound, float _volume = 0.8, float _coolTime = 1.0, float _delay = 0.0, int _mapIdx = 0, float _mapCoolTime = 1.0)
+	if playerRef.IsSwimming()
+		return
+	endif 	
+
 	float currentTime = Utility.GetCurrentRealTime()
-	if !playerRef.IsSwimming() && isGameRunning && currentTime >= soundCoolTime && currentTime >= coolTimeMap[_mapIdx]	 
-		soundCoolTime = currentTime + _coolTime
+	if isGameRunning && currentTime >= soundCoolTime.getValue() && currentTime >= coolTimeMap[_mapIdx]	 
+		soundCoolTime.setValue(currentTime + _coolTime)
 		coolTimeMap[_mapIdx] = currentTime + _mapCoolTime
 		if _delay != 0			
 			UnregisterForUpdate()
@@ -495,7 +434,7 @@ function SoundCoolTimePlay(Sound _sound, float _volume = 0.5, float _coolTime = 
 	endif
 endFunction
 
-int function SoundSwimmingPlay(Sound _sound, float _volumn = 0.6, int _mapIdx = 15, float _mapCoolTime = 3.0)
+int function SoundSwimmingPlay(Sound _sound, float _volumn = 0.8, int _mapIdx = 15, float _mapCoolTime = 3.0)
 	float currentTime = Utility.GetCurrentRealTime()
 	int soundId = 0
 	if isGameRunning && currentTime >= coolTimeMap[_mapIdx]
@@ -506,57 +445,35 @@ int function SoundSwimmingPlay(Sound _sound, float _volumn = 0.6, int _mapIdx = 
 endFunction
 
 function SoundHelloPlay(Sound _sound, float _volumn = 0.8)
-	if !playerRef.IsSwimming()
-		Sound.SetInstanceVolume(_sound.Play(playerRef), _volumn)	
-	endif
+	if playerRef.IsSwimming()
+		return
+	endif 	
+		
+	Sound.SetInstanceVolume(_sound.Play(playerRef), _volumn)		
 endFunction
 
 int function SoundBGPlay(Sound _sound, float _volume = 0.8)
 	int soundId = 0
+
+	if playerRef.IsSwimming()
+		return soundId
+	endif 	
 	
-	if !playerRef.IsSwimming()
-		soundId = _sound.Play(playerRef)
-		Sound.SetInstanceVolume(soundId, _volume)
-	endif
+	soundId = _sound.Play(playerRef)
+	Sound.SetInstanceVolume(soundId, _volume)	
 	return soundId
 endFunction
 
 function SoundVolumeUp(int _soundId, float _volume = 0.1)	
+	if playerRef.IsSwimming()
+		return
+	endif 
+
 	if _volume > 0.5 
 		_volume = 0.5
 	endif
 	Sound.SetInstanceVolume(_soundId, _volume)
 endFunction
-
-function clearNaked()
-	PlayerNakeState.setValue(0)	
-	Game.SetPlayerReportCrime(true)
-	coolTimeMap[4] = 0.0
-	expression("normal")
-endfunction
-
-function expression(string _type)
-	if _type == "disgust"
-		playerRef.SetExpressionOverride(6, 100)				; disgust
-		MfgConsoleFunc.SetPhoneme(playerRef,13,30)			; mouth
-		MfgConsoleFunc.SetModifier(playerRef, 0, 10)		; eye left
-		MfgConsoleFunc.SetModifier(playerRef, 1, 25)		; eye right
-		; playerRef.SetExpressionPhoneme(14, 20)  ; mouth	
-	elseif 	_type == "angry"
-		playerRef.SetExpressionOverride(0, 100)				; angry
-		MfgConsoleFunc.SetPhoneme(playerRef,13,20)			; mouth
-		MfgConsoleFunc.SetModifier(playerRef, 0, 10)		; eye left
-		MfgConsoleFunc.SetModifier(playerRef, 1, 25)		; eye right
-		; playerRef.SetExpressionPhoneme(14, 20)  ; mouth		
-	elseif 	_type == "happy"
-		playerRef.SetExpressionOverride(2, 100)				; happy
-		MfgConsoleFunc.SetPhoneme(playerRef,13,10)			; mouth
-		; playerRef.SetExpressionPhoneme(14, 20)  ; mouth		
-	else		
-		playerRef.ResetExpressionOverrides()
-		MfgConsoleFunc.ResetPhonemeModifier(playerRef) 		
-	endif	
-endfunction 
 
 function Log(string _msg)
 	MiscUtil.PrintConsole(_msg)
@@ -572,6 +489,10 @@ function LogKeywords(Keyword[] _keywords)
 	log("keywords " + _buf)
 endFunction
 
+ImmersivePcVoiceMCM property pcVoiceMCM Auto
+
+
+GlobalVariable property soundCoolTime Auto
 GlobalVariable property PlayerNakeState Auto
 GlobalVariable property PlayerDrunkState Auto
 
@@ -621,21 +542,6 @@ Sound property SayDrinkAlcoholSound Auto
 Sound property SayDrinkPotionSound Auto
 Sound property SayDrinkAlcoholToxicSound Auto
 
-; etc
-Sound property SayReactionSluttyClothSound Auto
-Sound property SayReactionSexyClothSound Auto
-Sound property SayReactionPantyClothSound Auto
-Sound property SayReactionPoorClothSound Auto
-Sound property SayReactionFancyClothSound Auto
-
-Sound property SayReactionLongHairSound Auto	; HairStyleLong
-Sound property SayReactionShortHairSound Auto	; HairStyleShort
-Sound property SayReactionPonyHairSound Auto	; HairStylePony
-Sound property SayReactionBangHairSound Auto	; HairStyleBang
-Sound property SayReactionBoldHairSound Auto	; HairStyleBold
-
-Sound property SayReactionHeelsSound Auto
-
-
 ; sneak background
 Sound property SayBgSneakModeSound Auto
+

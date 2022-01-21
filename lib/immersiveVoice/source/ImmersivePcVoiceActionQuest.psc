@@ -1,20 +1,20 @@
 scriptname ImmersivePcVoiceActionQuest extends Quest
 
-ReferenceAlias property playerRefAlias Auto
+ReferenceAlias property actorRefAlias Auto
 
 String version = "v0.1"
 
 event OnInit()
-	Debug.Notification("Load Immersive Action " + version)
+	Debug.Notification("Load Immersive Pc Action " + version)
 	
 	Setup()
 endEvent
 
 function Setup()	
-	PO3_Events_Alias.RegisterForBookRead(playerRefAlias)
-	PO3_Events_Alias.RegisterForDragonSoulGained(playerRefAlias)
-	PO3_Events_Alias.RegisterForItemHarvested(playerRefAlias)
-	PO3_Events_Alias.RegisterForLevelIncrease(playerRefAlias)
+	PO3_Events_Alias.RegisterForBookRead(actorRefAlias)
+	PO3_Events_Alias.RegisterForDragonSoulGained(actorRefAlias)
+	PO3_Events_Alias.RegisterForItemHarvested(actorRefAlias)
+	PO3_Events_Alias.RegisterForLevelIncrease(actorRefAlias)
 endFunction
 
 function Log(string msg)

@@ -1,7 +1,6 @@
 scriptname ImmersivePcVoiceCombatActorAlias extends ReferenceAlias
 
 int    underAttackCountByAnimal
-float  soundCoolTime
 float[] coolTimeMap
 
 Sound  runningCoolTimeSoundRes
@@ -11,6 +10,7 @@ Event OnInit()
 EndEvent
 
 event OnLoad()
+	LOG("Combat load..")
 	registerAction()
 	init()
 endEvent
@@ -32,13 +32,10 @@ function init ()
 	runningCoolTimeSoundRes = None
 	runningCoolTimeSoundVolume = 0.0
 	underAttackCountByAnimal = 0
-	soundCoolTime = 0.0	
 	coolTimeMap = new float[5]
 endFunction
 
 function regAnimation ()
-	LOG("regAnimation")
-
 	; weapon/bow
 	RegisterForAnimationEvent(playerRef, "weaponSwing")
 	RegisterForAnimationEvent(playerRef, "weaponLeftSwing")
@@ -59,22 +56,18 @@ Event OnAnimationEvent(ObjectReference akSource, string asEventName)
 		int level = 0
 		; getSkill Level
 		float oneHandSkillLevel = playerRef.GetAV("OneHanded")	
-		if oneHandSkillLevel < 30
+		if oneHandSkillLevel < 45
 			level = 0
-		elseif  oneHandSkillLevel < 60
-			level = 1
 		else 
-			level = 2
+			level = 1
 		endif 
 
 		if level == 0
 			float twoHandSkillLevel = playerRef.GetAV("TwoHanded")
-			if twoHandSkillLevel < 30
+			if twoHandSkillLevel < 45
 				level = 0
-			elseif  twoHandSkillLevel < 60
-				level = 1
 			else 
-				level = 2
+				level = 1
 			endif 
 		endif
 
@@ -82,16 +75,12 @@ Event OnAnimationEvent(ObjectReference akSource, string asEventName)
 			if playerRef.GetAnimationVariableBool("bAllowRotation")
 				if level == 0
 					SoundCoolTimePlay(SayCombatPowerAttackNoviceSound, _coolTime=1.5)
-				elseif level == 1
-					SoundCoolTimePlay(SayCombatPowerAttackApprenticeSound, _coolTime=1.5)
 				else 
 					SoundCoolTimePlay(SayCombatPowerAttackExpertSound, _coolTime=1.5)
 				endif
 			else
 				if level == 0
 					SoundCoolTimePlay(SayCombatAttackNoviceSound, _volume=0.4, _coolTime=1.0)
-				elseif level == 1
-					SoundCoolTimePlay(SayCombatAttackApprenticeSound, _volume=0.4, _coolTime=1.0)
 				else 
 					SoundCoolTimePlay(SayCombatAttackExpertSound, _volume=0.4, _coolTime=1.0)
 				endif				
@@ -220,7 +209,6 @@ Event OnHit(ObjectReference akAggressor, Form akSource, Projectile akProjectile,
 	; playerRef.SetRelationshipRank(akAggressor, -1)
 
 	if abHitBlocked
-		SoundCoolTimePlay(SayCombatBlockSound, _volume=0.4, _coolTime=2.0)
 	Else
 		bool  isPowerDamange = false
 		float nakedDamagePenalty = 10.0
@@ -280,19 +268,19 @@ Event OnHit(ObjectReference akAggressor, Form akSource, Projectile akProjectile,
 
 			; 파워 공격에 추가 데미지 적용
 			nakedDamagePenalty = 20.0
-			SoundCoolTimePlay(SayCombatCriticalHitSound, _volume=0.6, _coolTime=2.0)
+			SoundCoolTimePlay(SayCombatCriticalHitSound, _volume=0.6, _coolTime=3.0)
 		else 
-			SoundCoolTimePlay(SayCombatHitSound, _volume=0.6, _coolTime=2.0)
+			SoundCoolTimePlay(SayCombatHitSound, _volume=0.6, _coolTime=3.0)
 		endif
 
 		float penaltyHealthValue = playerRef.GetActorValue("Health")
 		bool  getPenalty = false
-		if PlayerNakeState.GetValue() == 1
+		if PlayerNakeState.GetValue() == 1.0
 			penaltyHealthValue = penaltyHealthValue / nakedDamagePenalty
 			getPenalty = true
 		endif
 
-		if PlayerDrunkState.GetValue() == 1
+		if PlayerDrunkState.GetValue() == 1.0
 			penaltyHealthValue = penaltyHealthValue / drunkDamagePenalty
 			getPenalty = true
 		endif
@@ -302,7 +290,7 @@ Event OnHit(ObjectReference akAggressor, Form akSource, Projectile akProjectile,
 		endif		
 	endif
 
-	Log("health " +  playerRef.GetActorValue("Health"))
+	; Log("health " +  playerRef.GetActorValue("Health"))
 EndEvent
 
 Event OnUpdate()
@@ -347,10 +335,14 @@ bool function checkFireSpell(form _akSource)
 	return false
 endfunction
 
-function SoundCoolTimePlay(Sound _sound, float _volume = 0.5, float _coolTime = 1.0, float _delay = 0.0, int _mapIdx = 0, float _mapCoolTime = 1.0)
+function SoundCoolTimePlay(Sound _sound, float _volume = 0.8, float _coolTime = 1.0, float _delay = 0.0, int _mapIdx = 0, float _mapCoolTime = 1.0)
+	if pcVoiceMCM.enableCombatSound == false || playerRef.IsSwimming() 
+		return
+	endif
+
 	float currentTime = Utility.GetCurrentRealTime()
-	if !playerRef.IsSwimming() && currentTime >= soundCoolTime && currentTime >= coolTimeMap[_mapIdx] 
-		soundCoolTime = currentTime + _coolTime
+	if currentTime >= soundCoolTime.getValue() && currentTime >= coolTimeMap[_mapIdx] 
+		soundCoolTime.setValue(currentTime + _coolTime)
 		coolTimeMap[_mapIdx] = currentTime + _mapCoolTime
 		if _delay != 0.0
 			UnregisterForUpdate()
@@ -367,16 +359,20 @@ function SoundCoolTimePlay(Sound _sound, float _volume = 0.5, float _coolTime = 
 endFunction
 
 function SoundPlay(Sound _sound, float _volume = 0.8)
-	if !playerRef.IsSwimming() 
-		Sound.SetInstanceVolume(_sound.Play(playerRef), _volume)
+	if pcVoiceMCM.enableCombatSound == false || playerRef.IsSwimming() 
+		return
 	endif
+
+	Sound.SetInstanceVolume(_sound.Play(playerRef), _volume)	
 endFunction
 
 function Log(string _msg)
 	MiscUtil.PrintConsole(_msg)
 endFunction
 
+ImmersivePcVoiceMCM property pcVoiceMCM Auto
 
+GlobalVariable property soundCoolTime Auto
 GlobalVariable property PlayerNakeState Auto
 GlobalVariable property PlayerDrunkState Auto
 
@@ -394,9 +390,6 @@ Sound property SayCombatEndSneakSound Auto
 Sound property SayCombatHitSound Auto
 Sound property SayCombatCriticalHitSound Auto
 
-	; shield
-Sound property SayCombatBlockSound Auto				
-
 	; bow
 Sound property SayCombatBowDrawSound Auto
 Sound property SayCombatBowDrawSneakSound Auto
@@ -406,9 +399,6 @@ Sound property SayCombatBowReleaseSneakSound Auto
 	; weapon
 Sound property SayCombatAttackNoviceSound Auto
 Sound property SayCombatPowerAttackNoviceSound Auto
-
-Sound property SayCombatAttackApprenticeSound Auto
-Sound property SayCombatPowerAttackApprenticeSound Auto
 
 Sound property SayCombatAttackExpertSound Auto
 Sound property SayCombatPowerAttackExpertSound Auto

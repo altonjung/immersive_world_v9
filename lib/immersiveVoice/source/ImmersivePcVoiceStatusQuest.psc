@@ -1,11 +1,9 @@
 scriptname ImmersivePcVoiceStatusQuest extends Quest
 
-ReferenceAlias property playerRefAlias Auto
-
 String version = "v0.1"
 
 event OnInit()
-	Debug.Notification("Load Immersive Status " + version)
+	Debug.Notification("Load Immersive Pc Status " + version)
 	
 	Setup()
 endEvent
