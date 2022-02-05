@@ -14,7 +14,7 @@ function Setup()
 	PO3_Events_Alias.RegisterForBookRead(actorRefAlias)
 	PO3_Events_Alias.RegisterForDragonSoulGained(actorRefAlias)
 	PO3_Events_Alias.RegisterForItemHarvested(actorRefAlias)
-	PO3_Events_Alias.RegisterForLevelIncrease(actorRefAlias)
+	; PO3_Events_Alias.RegisterForLevelIncrease(actorRefAlias)
 endFunction
 
 function Log(string msg)

@@ -2,6 +2,15 @@ Scriptname PO3_Events_AME  Hidden
 
 ;EVENTS SHOULD BE CALLED ON AN ACTIVEFFECT - script that is attached to a magic effect.
 
+;ACTOR FALL LONG DISTANCE
+;fires when the actor falls enough distance to take fall damage
+	
+	Function RegisterForActorFallLongDistance(ActiveMagicEffect akActiveEffect) global native	
+	Function UnregisterForActorFallLongDistance(ActiveMagicEffect akActiveEffect) global native
+	
+	Event OnActorFallLongDistance(Actor akTarget, float afFallDistance, float afFallDamage)
+	EndEvent
+
 ;ACTOR KILL
 	
 	Function RegisterForActorKilled(ActiveMagicEffect akActiveEffect) global native	
@@ -57,7 +66,7 @@ Scriptname PO3_Events_AME  Hidden
 	Function RegisterForCriticalHit(ActiveMagicEffect akActiveEffect) global native	
 	Function UnregisterForCriticalHit(ActiveMagicEffect akActiveEffect) global native
 	
-	Event OnCriticalHit(Actor akAggressor, Weapon akWeapon, book abSneakHit)
+	Event OnCriticalHit(Actor akAggressor, Weapon akWeapon, bool abSneakHit)
 	EndEvent
 	
 ;DISARMED
@@ -157,11 +166,13 @@ Scriptname PO3_Events_AME  Hidden
 	EndEvent
 	
 ;SKILL INCREASE
+;4.5.6 - Event had its params changed from String to Int as a workaround for only the first registered event recieving any events
+;See https://github.com/Ryan-rsm-McKenzie/CommonLibSSE/blob/master/include/RE/A/ActorValues.h
 
 	Function RegisterForSkillIncrease(ActiveMagicEffect akActiveEffect) global native	
 	Function UnregisterForSkillIncrease(ActiveMagicEffect akActiveEffect) global native
 	
-	Event OnSkillIncrease(String asSkill)
+	Event OnSkillIncrease(Int aiSkill)
 	EndEvent
 	
 ;SOUL TRAP
@@ -187,6 +198,70 @@ Scriptname PO3_Events_AME  Hidden
 	Function UnregisterForWeatherChange(ActiveMagicEffect akActiveEffect) global native
 		
 	Event OnWeatherChange(Weather akOldWeather, Weather akNewWeather)
+	EndEvent
+	
+;MAGIC EFFECT APPLY
+;Filter takes in a matching magic effect, a keyword, or a formlist containing keywords.
+;bApplied will return if the magic effect was applied or not, unlike vanilla event which fires for everything.
+
+	Function RegisterForMagicEffectApplyEx(ActiveMagicEffect akActiveEffect, Form akEffectFilter, bool abMatch) global native	
+	Function UnregisterForMagicEffectApplyEx(ActiveMagicEffect akActiveEffect, Form akEffectFilter, bool abMatch) global native
+	Function UnregisterForAllMagicEffectApplyEx(ActiveMagicEffect akActiveEffect) global native
+		
+	Event OnMagicEffectApplyEx(ObjectReference akCaster, MagicEffect akEffect, Form akSource, bool abApplied)
+	EndEvent
+	
+;ON WEAPON HIT
+;Event OnHit except weapons only AND the aggressor recieves this event for each target hit by it
+;Statics have no hit flags - 0
+	
+	;/ FLAGS - use SKSE's LogicalAnd to check if flag is set
+			
+		kBlocked = 1,
+		kBlockWithWeapon = 2,
+		kBlockCandidate = 4,
+		kCritical = 8,
+		kCriticalOnDeath = 16,
+		kFatal = 32,
+		kDismemberLimb = 64,
+		kExplodeLimb = 128,
+		kCrippleLimb = 256,
+		kDisarm = 512,
+		kDisableWeapon = 1024,
+		kSneakAttack = 2048,
+		kIgnoreCritical = 4096,
+		kPredictDamage = 8192,
+		kPredictBaseDamage = 16384,
+		kBash = 32768,
+		kTimedBash = 65536,
+		kPowerAttack = 131072,
+		kMeleeAttack = 262144,
+		kRicochet = 524288,
+		kExplosion = 1048576
+	/;
+	
+	Function RegisterForWeaponHit(ActiveMagicEffect akActiveEffect) global native	
+	Function UnregisterForWeaponHit(ActiveMagicEffect akActiveEffect) global native
+		
+	Event OnWeaponHit(ObjectReference akTarget, Form akSource, Projectile akProjectile, Int aiHitFlagMask)
+	EndEvent
+	
+;ON MAGIC HIT
+;Event OnHit except for magic AND aggressor recieves this event for each target hit by it
+
+	Function RegisterForMagicHit(ActiveMagicEffect akActiveEffect) global native	
+	Function UnregisterForMagicHit(ActiveMagicEffect akActiveEffect) global native
+		
+	Event OnMagicHit(ObjectReference akTarget, Form akSource, Projectile akProjectile)
+	EndEvent
+	
+;ON PROJECTILE HIT
+;Event OnHit except for projectiles AND the aggressor recieves this event for each target hit by it
+
+	Function RegisterForProjectileHit(ActiveMagicEffect akActiveEffect) global native	
+	Function UnregisterForProjectileHit(ActiveMagicEffect akActiveEffect) global native
+		
+	Event OnProjectileHit(ObjectReference akTarget, Form akSource, Projectile akProjectile)
 	EndEvent
 	
 ;FEC - RESET ACTOR EFFECTS

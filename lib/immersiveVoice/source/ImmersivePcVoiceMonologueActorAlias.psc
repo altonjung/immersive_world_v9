@@ -2,20 +2,21 @@ scriptname ImmersivePcVoiceMonologueActorAlias extends ReferenceAlias
 
 bool   isGameRunning
 
-int    underWaterSoundId
-float  underWaterSoundVolume
+Actor  controlActor
+ObjectReference overHairRef
 
-float  sneakingBgSoundVolume
-int    SneakBgSoundId
-
+bool   isControlling
 bool   isLoadLocationChanged
+
 string visitLocation
 float[] coolTimeMap
+float   collTimeForMonologue
 
 Sound  runningCoolTimeSoundRes
 float  runningCoolTimeSoundVolume
 
 Location prevVisitLocation
+
 Event OnInit()
 	initMenu()	
 EndEvent
@@ -29,6 +30,7 @@ endEvent
 function initMenu()	
 	UnregisterForAllMenus()
 	RegisterForMenu("RaceSex Menu")
+	RegisterForMenu("Dialogue Menu")
 endFunction
 
 ; save -> load 시 호출
@@ -59,84 +61,238 @@ function init ()
 	runningCoolTimeSoundVolume = 0.0
 	isLoadLocationChanged = false
 
-	underWaterSoundId = 0
-	underWaterSoundVolume = 0.0
+	overHairRef = None	
+	controlActor = None
+	isControlling = false
 
-	SneakBgSoundId = 0
-	sneakingBgSoundVolume = 0.0
+	collTimeForMonologue = 0.0
 
 	soundCoolTime.SetValue(0.0)
-	coolTimeMap = new float[20]
-	;	0: normal, 1: drunk, 2: dialog(normal), 3: dialog(child), 4: dialog(enemy), 5: dialog(lover), 6: dialog(friend), 7: dialog(soldier) 8: dialogu(ghost), 9: dialogu(noble), 10: dialogu(ugly), 13: swimming
+	coolTimeMap = new float[30]	
 endFunction
 
 function regAnimation ()
-	; sneak
-	RegisterForAnimationEvent(playerRef, "tailSneakIdle") 			; start in standing
-	RegisterForAnimationEvent(playerRef, "tailMTIdle") 				; end in sprint or sneak
-	RegisterForAnimationEvent(playerRef, "tailCombatIdle") 			; end
-	RegisterForAnimationEvent(playerRef, "tailCombatLocomotion") 	; end
-
-	; swimming
-	RegisterForAnimationEvent(playerRef, "SoundPlay.FSTSwimSwim")	; start
-	RegisterForAnimationEvent(playerRef, "MTState") 				; end
+	; key
+	RegisterForControl("Activate")	
 endFunction
 
 Event OnAnimationEvent(ObjectReference akSource, string asEventName)
-	if asEventName == "tailSneakIdle"
-		; 만약 손에 활을 들고 있다면, sneak BG 출력 무시
-		if  playerRef.GetEquippedItemType(0) != 7 && playerRef.GetEquippedItemType(1) != 7 	;bow			
+endEvent
 
-			if SneakBgSoundId == 0
-				SneakBgSoundId = SoundBGPlay(SayBgSneakModeSound, sneakingBgSoundVolume)			
-			else 
-				sneakingBgSoundVolume += 0.1
-				SoundVolumeUp(SneakBgSoundId, sneakingBgSoundVolume)
+Event OnControlDown(string control)
+		
+	overHairRef = Game.GetCurrentCrosshairRef()
+	Actor akActor = overHairRef as Actor
 
-				if sneakingBgSoundVolume == 0.1					
-					SoundBGPlay(SayStateSneakSound, _volume=0.4)					
+	; player와 대화 대상 찾기
+	If akActor != none && !akActor.isDead() 
+		isControlling = true
+		controlActor = None
+		
+		if akActor.HasKeyWordString("ActorTypeNPC")	
+			controlActor = akActor
+			if PlayerRef.IsInCombat()				
+				if playerRef.IsHostileToActor(akActor)
+					SoundCoolTimePlay(SayDialogueWarnBatleEnemySound, _coolTime=2.0, _mapIdx=3, _mapCoolTime=5.0)
+				else 
+					if akActor.isChild()
+						SoundCoolTimePlay(SayDialogueWarnBattleChildSound, _coolTime=2.0, _mapIdx=15, _mapCoolTime=5.0)
+					else
+						SoundCoolTimePlay(SayDialogueWarnBattleSound,  _coolTime=2.0, _mapIdx=15, _mapCoolTime=5.0)
+					endif
 				endif
-
-				log("sneak play with volume " + sneakingBgSoundVolume)
+				expression("angry")
+			else
+				int dialogueActorRelationShip = playerRef.GetRelationshipRank(akActor)
+				; 강제로 hostile 대상으로 만들기
+				if playerRef.IsHostileToActor(akActor) && dialogueActorRelationShip >= 0
+					dialogueActorRelationShip = -1
+				endif
+				
+				if akActor.isChild() 	; 아이
+					if akActor.GetSleepState() == 3 ;sleeping
+						; 자고있는 상태
+						SoundCoolTimePlay(SayDialogueSleepChildSound,  _coolTime=2.0, _mapIdx=2, _mapCoolTime=7.0)
+						expression("happy")							
+					elseif  akActor.getFactionRank(WoundedFaction) > -2
+						; 아픈 상태
+						SoundCoolTimePlay(SayDialogueSickChildSound, _coolTime=2.0, _mapIdx=2, _mapCoolTime=7.0)
+						expression("sad")				
+					elseif PlayerNakeState.getValue() == 1 ; 주인공이 벗은상태
+						SoundCoolTimePlay(SayDialogueShyNakeOnChildSound, _coolTime=2.0, _mapIdx=2, _mapCoolTime=7.0)
+						expression("sad")
+					else 							
+						SoundCoolTimePlay(SayDialogueNormalChildSound,  _coolTime=2.0, _mapIdx=2, _mapCoolTime=7.0)
+						expression("happy")					
+					endif
+				else 					; 어른						
+					if akActor.IsGhost(); 귀신
+						SoundCoolTimePlay(SayDialogueNormalGhostSound, _coolTime=2.0, _mapIdx=8, _mapCoolTime=7.0)
+						expression("sad")						
+					elseif  dialogueActorRelationShip == 4; 배우자
+						if akActor.GetSleepState() == 3 ;sleeping
+							SoundCoolTimePlay(SayDialogueSleepLoverSound,  _coolTime=2.0, _mapIdx=5, _mapCoolTime=7.0)
+							expression("reset")													
+						elseif akActor.GetActorValuePercentage("Health") <= 0.2
+							SoundCoolTimePlay(SayDialogueSickLoverSound,  _coolTime=2.0, _mapIdx=5, _mapCoolTime=7.0)
+							expression("sad")		
+						else
+							float currentHour = Utility.GetCurrentGameTime() * 24.0
+							if currentHour < 3 || currentHour > 22
+								SoundCoolTimePlay(SayDialogueNormalLoverLoveSound, _coolTime=2.0, _mapIdx=5, _mapCoolTime=7.0)
+							else 
+								SoundCoolTimePlay(SayDialogueNormalLoverSound, _coolTime=2.0, _mapIdx=5, _mapCoolTime=7.0)
+							endif
+							expression("happy")							
+						endif
+					elseif dialogueActorRelationShip < 0 ; 적
+						SoundCoolTimePlay(SayDialogueNormalEnemySound,  _coolTime=2.0, _mapIdx=3, _mapCoolTime=7.0)
+						expression("angry")	
+					else
+						if akActor.GetSleepState() == 3 ;sleeping
+							SoundCoolTimePlay(SayDialogueSleepSound,  _coolTime=2.0, _mapIdx=14, _mapCoolTime=7.0)
+							expression("reset")								
+						elseif  akActor.getFactionRank(WoundedFaction) > -2
+							SoundCoolTimePlay(SayDialogueSickSound,  _coolTime=2.0, _mapIdx=13, _mapCoolTime=7.0)
+							expression("sad")
+						else
+							; LOG("isGuard " + akActor.IsGuard() + ", isJarl " + akActor.getFactionRank(JobJarlFaction) + ", isPostman " + akActor.getFactionRank(JobDeliveryFaction))
+							if PlayerNakeState.getValue() == 1 ; 주인공이 벗은상태
+								if akActor.getFactionRank(BanditFaction) > -2	; 산적들에게
+									SoundCoolTimePlay(SayDialogueShyNakeOnBanditSound,  _coolTime=2.0, _mapIdx=10, _mapCoolTime=7.0)
+								else 
+									SoundCoolTimePlay(SayDialogueShyNakeSound,  _coolTime=2.0, _mapIdx=10, _mapCoolTime=7.0)
+								endif
+								expression("sad")
+							elseif akActor.getFactionRank(CompanionFaction) == -2 && akActor.getFactionRank(CWDialogueSoldierFaction) > -2 ; 병사
+								if Utility.RandomInt(0, 5) > 3
+									SoundCoolTimePlay(SayDialogueNormalSound, _coolTime=2.0, _mapIdx=4, _mapCoolTime=7.0)
+								else 
+									SoundCoolTimePlay(SayDialogueNormalSoldierSound, _coolTime=2.0, _mapIdx=4, _mapCoolTime=7.0)
+								endif 
+								expression("reset")			
+							elseif akActor.getFactionRank(CompanionFaction) == -2 && akActor.IsGuard() ; 경비병
+								if Utility.RandomInt(0, 5) > 3
+									SoundCoolTimePlay(SayDialogueNormalSound, _coolTime=2.0, _mapIdx=4, _mapCoolTime=7.0)
+								else 
+									SoundCoolTimePlay(SayDialogueNormalGuardSound, _coolTime=2.0, _mapIdx=4, _mapCoolTime=7.0)
+								endif
+								expression("reset")												
+							elseif akActor.getFactionRank(DLC2RieklingFaction) > -2	; riekling
+								elseif akActor.getFactionRank(JobJarlFaction) > -2	; jarl
+								SoundCoolTimePlay(SayDialogueNormalJarlSound, _coolTime=2.0, _mapIdx=6, _mapCoolTime=7.0)
+								expression("reset")
+							elseif akActor.getFactionRank(JobPriestFaction) > -2 ; priest
+								SoundCoolTimePlay(SayDialogueNormalPristSound, _coolTime=2.0, _mapIdx=6, _mapCoolTime=7.0)
+								expression("reset")									
+							elseif akActor.GetActorBase().getRace() == ElderRace ; elder
+								SoundCoolTimePlay(SayDialogueNormalElderSound,  _coolTime=2.0, _mapIdx=6, _mapCoolTime=7.0)
+								expression("reset")
+							elseif dialogueActorRelationShip ==  2 ; friend
+								SoundCoolTimePlay(SayDialogueNormalFriendSound, _coolTime=2.0, _mapIdx=7, _mapCoolTime=7.0)
+								expression("happy")
+							elseif dialogueActorRelationShip ==  3 ; follower
+								SoundCoolTimePlay(SayDialogueNormalFollowerSound, _coolTime=2.0, _mapIdx=9, _mapCoolTime=7.0)
+								expression("happy")														
+							elseif dialogueActorRelationShip == 0 ; unknown								
+								Armor _ActorArmor = akActor.GetWornForm(0x00000004) as Armor
+								if _ActorArmor == None ; 타인이 벗은 상태
+									if GetGender(akActor) == 1 ; female
+										SoundCoolTimePlay(SayDialogueWarnNakedOnFemaleSound, _coolTime=2.0, _mapIdx=10, _mapCoolTime=7.0)
+									else 
+										SoundCoolTimePlay(SayDialogueWarnNakedOnMaleSound, _coolTime=2.0, _mapIdx=10, _mapCoolTime=7.0)
+									endif
+									; akActor.SendAssaultAlarm()																		
+								else 																	
+									if PlayerLocationInTown.getValue() == 1
+										if akActor.getFactionRank(BeautyFaction) > -2 && Utility.RandomInt(0, 2) == 0
+											if GetGender(akActor) == 1 ; female
+												SoundCoolTimePlay(SayDialogueEnvyAppearanceBeautyOnFemaleSound, _coolTime=2.0, _mapIdx=11, _mapCoolTime=7.0)
+											else 
+												SoundCoolTimePlay(SayDialogueEnvyAppearanceBeautyOnMaleSound, _coolTime=2.0, _mapIdx=11, _mapCoolTime=7.0)
+											endif
+											expression("happy")
+										elseif _ActorArmor.IsClothingRich() && Utility.RandomInt(0, 1) == 0
+											if GetGender(akActor) == 1 ; female
+												SoundCoolTimePlay(SayDialogueEnvyClothBeautyOnFemaleSound, _coolTime=2.0, _mapIdx=11, _mapCoolTime=7.0)
+											else 
+												SoundCoolTimePlay(SayDialogueEnvyClothBeautyOnMaleSound, _coolTime=2.0, _mapIdx=11, _mapCoolTime=7.0)
+											endif
+											expression("happy")
+										else 
+											SoundCoolTimePlay(SayDialogueNormalSound,  _coolTime=2.0, _mapIdx=10, _mapCoolTime=7.0)
+											expression("reset")
+										endif
+									else 
+										SoundCoolTimePlay(SayDialogueShySound, _coolTime=2.0, _mapIdx=10, _mapCoolTime=7.0)
+										expression("reset")
+									endif						
+								endif
+							else 
+								SoundCoolTimePlay(SayDialogueShySound,  _coolTime=2.0, _mapIdx=10, _mapCoolTime=7.0)
+								expression("reset")
+							endif
+						endif
+					endif
+				endif			
+			endif
+		elseif akActor.HasKeyWordString("ActorTypeAnimal")	
+			if !playerRef.IsHostileToActor(akActor) 
+				SoundCoolTimePlay(SayDefaultSound, _coolTime=2.0, _mapIdx=10, _mapCoolTime=5.0)
 			endif
 		endif
-	elseif asEventName == "tailMTIdle"
-		; sneak -> stand idle
-		if SneakBgSoundId != 0
-			Sound.StopInstance(SneakBgSoundId)			
-			SneakBgSoundId = 0
-			sneakingBgSoundVolume = 0.0
-		endif		
-	elseif asEventName == "SoundPlay.FSTSwimSwim"	
-		underWaterSoundId = SoundSwimmingPlay(SayStateUnderWaterSound, underWaterSoundVolume)
-		
-		underWaterSoundVolume += 0.1
-		if underWaterSoundVolume > 0.5
-			underWaterSoundVolume = 0.5
-		endif
-	elseif asEventName == "MTState"
-		underWaterSoundVolume = 0.0
-		Sound.StopInstance(underWaterSoundId)
-		underWaterSoundId = 0
-	endif
-	
-	; Log("OnAnimationEvent " + asEventName)
+		isControlling = false
+	endif	
 endEvent
 
 ;
 ;	Menu
 ;
 Event OnMenuOpen(string menuName)
-	log("OnMenuOpen")
 	if menuName == "RaceSex Menu"			
 		isGameRunning = false
 		SoundHelloPlay(SayHelloSound)	
+	elseif menuName == "Dialogue Menu"
+		while isControlling
+			Utility.WaitMenuMode(0.1)
+		endWhile
+	
+		if controlActor == None || Game.GetCurrentCrosshairRef() == None
+			Actor akActor  = Game.GetDialogueTarget() as Actor
+		
+			if akActor
+				if playerRef.IsHostileToActor(akActor)
+					SoundCoolTimePlay(SayDialogueWarnBatleEnemySound, _delay=0.5, _coolTime=2.0, _mapIdx=3, _mapCoolTime=10.0)
+					expression("angry")
+				else 
+					if PlayerNakeState.GetValue() == 1		
+						SoundCoolTimePlay(SayDialoguePassiveShySound, _delay=0.5, _coolTime=2.0, _mapIdx=12, _mapCoolTime=10.0)
+						expression("sad")
+					elseif akActor.getFactionRank(CompanionFaction) == -2 && akActor.IsGuard() ; guard
+						SoundCoolTimePlay(SayDialoguePassiveGuardSound, _delay=0.5, _coolTime=2.0, _mapIdx=12, _mapCoolTime=10.0)
+						expression("reset")
+					elseif akActor.getFactionRank(JobDeliveryFaction) > -2	; postman
+						SoundCoolTimePlay(SayDialoguePassivePostmanSound,_delay=0.5, _coolTime=2.0, _mapIdx=12, _mapCoolTime=10.0)
+						expression("happy")
+					elseif akActor.getFactionRank(JobJarlFaction) > -2	; jarl
+						SoundCoolTimePlay(SayDialoguePassiveJarlSound,_delay=0.5, _coolTime=2.0, _mapIdx=12, _mapCoolTime=10.0)
+						expression("reset")
+					elseif PlayerDrunkState.GetValue() == 1
+						SoundCoolTimePlay(SayDialoguePassiveSexySound, _delay=0.5, _coolTime=2.0, _mapIdx=12, _mapCoolTime=10.0)
+						expression("happy")
+					else 
+						SoundCoolTimePlay(SayDialoguePassiveSound,_delay=0.5, _coolTime=2.0, _mapIdx=12, _mapCoolTime=10.0)	
+						expression("happy")
+					endif					
+				endif
+			endif
+		endif
+		
+		controlActor = None		
 	endif
 endEvent
 
 Event OnMenuClose(string menuName)		
-	log("OnMenuClose")
-
 	if menuName == "RaceSex Menu"			
 		isGameRunning = true
 	endif	
@@ -147,47 +303,32 @@ endEvent
 ;
 Event OnWeatherChange(Weather akOldWeather, Weather akNewWeather)
 	log("OnWeatherChange ")
-	if playerRef.IsInCombat()
+	if !isGameRunning || playerRef.IsInCombat()
 		return
 	endif
 	
 	int _skyType = Weather.GetSkyMode()	
 
 	if _skyType == 3
-		int oldWeatherType = akOldWeather.GetClassification()	
-		int newWeatherType = akNewWeather.GetClassification()	
+		int _weatherType = akNewWeather.GetClassification()	
 		; -1 - No classification
 		;  0 - Pleasant
 		;  1 - Cloudy
 		;  2 - Rainy
 		;  3 - Snow
-		if newWeatherType == 0				
-			if oldWeatherType == 3
-				SoundCoolTimePlay(SayWeatherWarmSound, _delay=3.0, _coolTime=2.0, _mapIdx=2, _mapCoolTime=30.0)
+		if _weatherType == 0				
+			if akOldWeather.GetClassification() == 3
+				SoundCoolTimePlay(SayWeatherWarmSound, _delay=3.0, _coolTime=2.0, _mapIdx=3, _mapCoolTime=5.0)
 			else
-				SoundCoolTimePlay(SayWeatherSunnySound, _delay=3.0, _coolTime=2.0, _mapIdx=2, _mapCoolTime=30.0)
+				SoundCoolTimePlay(SayWeatherSunnySound, _delay=3.0, _coolTime=2.0, _mapIdx=3, _mapCoolTime=5.0)
 			endif
-		elseif newWeatherType == 2
-			SoundCoolTimePlay(SayWeatherRainySound, _delay=3.0, _coolTime=2.0, _mapIdx=2, _mapCoolTime=30.0)
-		elseif newWeatherType == 3
-			SoundCoolTimePlay(SayWeatherSnowSound, _delay=3.0, _coolTime=2.0, _mapIdx=2, _mapCoolTime=30.0)
+		elseif _weatherType == 2
+			log("Rain ")
+			SoundCoolTimePlay(SayWeatherRainySound, _delay=3.0, _coolTime=2.0, _mapIdx=3, _mapCoolTime=5.0)
+		elseif _weatherType == 3
+			log("Snow ")
+			SoundCoolTimePlay(SayWeatherSnowSound, _delay=3.0, _coolTime=2.0, _mapIdx=3, _mapCoolTime=5.0)
 		endif
-	endif
-EndEvent
-
-;
-;	Drink
-;
-Event OnMagicEffectApply(ObjectReference akCaster, MagicEffect akEffect)
-	; log("OnMagicEffectApply")
-	if akEffect.HasKeyWordString("MagicAlchBeneficial")	&& (akEffect.HasKeyWordString("MagicAlchRestoreHealth") || akEffect.HasKeyWordString("MagicAlchRestoreMagicka") || akEffect.HasKeyWordString("MagicAlchRestoreStamina"))
-		SoundCoolTimePlay(SayDrinkPotionSound, _coolTime=3.0, _mapIdx=3, _mapCoolTime=3.0)
-		; Log("Drink H/M/S potion")
-	elseif akEffect.HasKeyWordString("MagicAlchBeneficial")	; cure
-		SoundCoolTimePlay(SayDrinkPotionSound, _coolTime=3.0, _mapIdx=3, _mapCoolTime=3.0)
-		; Log("Drink cure potion")	
-	elseif akEffect.HasKeyWordString("MagicAlchHarmful")	; alchol
-		SoundCoolTimePlay(SayDrinkAlcoholSound, _coolTime=3.0, _mapIdx=3, _mapCoolTime=3.0)		
 	endif
 EndEvent
 
@@ -195,44 +336,73 @@ EndEvent
 ;	Location
 ;
 Event OnLocationChange(Location akOldLoc, Location akNewLoc)
-	; log("OnLocationChange " + isCombat)
-	if playerRef.IsInCombat()
+	if !isGameRunning || playerRef.IsInCombat()
 		return
-	endif 
+	endif
 
 	prevVisitLocation = akOldLoc
 	isLoadLocationChanged = true
 
 	visitLocation = ""
+	bool playMonologue = false
 	int _skyMode = Weather.GetSkyMode()
 	int _weatherType = Weather.GetCurrentWeather().GetClassification()
 
-	if isGameRunning
-		if 50.0 <= playerRef.GetActorValue("Stamina")
-			if PlayerNakeState.getValue() == 1.0
-				Location currentLocation = playerRef.GetCurrentLocation()
-				visitLocation = checkLocation(currentLocation)
+	float _currentTime = Utility.GetCurrentRealTime()	
+	if _currentTime > collTimeForMonologue
+		collTimeForMonologue = _currentTime + 30.0	; 30초간은 monologue 용 cooltime
+		if 0.4 <= playerRef.GetActorValuePercentage("Stamina") && 0.5 <= playerRef.GetActorValuePercentage("Health")
+			if _skyMode == 3
+			; 야외
+				if Utility.RandomInt(0, 1) == 0
+					if playerRef.GetActorValuePercentage("Health") <= 0.3	&& _currentTime > coolTimeMap[27]
+						SoundCoolTimePlay(SayStateLowHealthSound, _coolTime=3.0, _mapIdx=27, _mapCoolTime=60.0)					
+					elseif PlayerNakeState.getValue() == 1 && _currentTime > coolTimeMap[20]
+						SoundCoolTimePlay(SayStateNakedSound, _coolTime=3.0, _mapIdx=20, _mapCoolTime=300.0)
+					elseif _weatherType == 2 && _currentTime > coolTimeMap[21]
+						SoundCoolTimePlay(SayWeatherRainySound, _coolTime=3.0, _mapIdx=21, _mapCoolTime=300.0)
+					elseif _weatherType == 3 && _currentTime > coolTimeMap[21]
+						SoundCoolTimePlay(SayWeatherSnowSound, _coolTime=3.0, _mapIdx=21, _mapCoolTime=300.0)
+					else
+						Armor _boots = playerRef.GetWornForm(0x00000080) as Armor
+						Armor _armor = playerRef.GetWornForm(0x00000004) as Armor
 
-				if visitLocation != "home"
-					SoundCoolTimePlay(SayStateNakedSound, _coolTime=3.0, _mapIdx=0, _mapCoolTime=60.0)
-				endif
-			elseif PlayerDrunkState.getValue() == 1.0
-				Game.ShakeCamera(afDuration = 1.0)
-				SoundCoolTimePlay(SayDrinkAlcoholToxicSound, _coolTime=3.0, _mapIdx=0, _mapCoolTime=60.0)
-			elseif playerRef.GetActorValue("Health") <= 0.3		; low health
-				SoundCoolTimePlay(SayStateLowHealthSound, _coolTime=3.0, _mapIdx=0, _mapCoolTime=60.0)
-			elseif !playerRef.GetWornForm(0x00000080) 			; no shoes
-				SoundCoolTimePlay(SayStateBareFeetSound, _coolTime=3.0, _mapIdx=0, _mapCoolTime=60.0)		
-			elseif _skyMode == 3				
-				if _weatherType == 2
-					SoundCoolTimePlay(SayWeatherRainySound, _delay=1.0, _coolTime=2.0, _mapIdx=2, _mapCoolTime=60.0)
-				elseif _weatherType == 3
-					SoundCoolTimePlay(SayWeatherSnowSound,  _delay=1.0, _coolTime=2.0, _mapIdx=2, _mapCoolTime=60.0)
+						if _boots == none && _currentTime > coolTimeMap[22]
+							coolTimeMap[25] = 0.0
+							SoundCoolTimePlay(SayStateBareFeetSound, _coolTime=10.0, _mapIdx=22, _mapCoolTime=600.0)							
+						else
+							if _armor 
+								if _armor.IsClothingPoor() && _currentTime > coolTimeMap[23]									
+									SoundCoolTimePlay(SayStatePoorClothesSound, _coolTime=10.0, _mapIdx=23, _mapCoolTime=300.0 * Utility.RandomInt(1, 2)) ; 5분 ~ 10분
+								elseif (_armor.HasKeyWordString("ClothingSlutty") || _armor.HasKeyWordString("SOS_Revealing") || _armor.HasKeyWordString("ClothingSexy") || _armor.HasKeyWordString("ClothingBeauty")) && soundCoolTime.getValue() > coolTimeMap[24]
+									SoundCoolTimePlay(SayStateUncomfortClothesSound, _coolTime=10.0, _mapIdx=24, _mapCoolTime=300.0 * Utility.RandomInt(1, 2)) ; 5분 ~ 10분
+								else
+									coolTimeMap[23] = 0.0
+									coolTimeMap[24] = 0.0
+									if _currentTime > coolTimeMap[25]
+										SoundCoolTimePlay(SayStateComfortClothesSound, _coolTime=10.0, _mapIdx=25, _mapCoolTime=600.0) ; 10분
+									else 
+										playMonologue = true										
+									endif
+								endif
+							elseif _boots && _boots.HasKeyWordString("ArmorHeels") && _currentTime > coolTimeMap[26]
+								coolTimeMap[22] = 0.0
+								SoundCoolTimePlay(SayStateUncomfortBootsSound, _coolTime=10.0, _mapIdx=26, _mapCoolTime=180.0)
+							else 
+								playMonologue = true								
+							endif
+						endif
+					endif
 				else
+					playMonologue = true					
+				endif
+
+				if playMonologue
 					; 모노로그 출력
-					SoundCoolTimePlay(SayMonologueSound, _delay=1.0, _coolTime=2.0, _mapIdx=2,  _mapCoolTime=300.0 * Utility.RandomInt(1, 3)) ; 5분 ~ 15분
-				endif			
+					SoundCoolTimePlay(SayMonologueSound, _coolTime=10.0, _mapIdx=4,  _mapCoolTime=300.0 * Utility.RandomInt(2, 3)) ; 10분 ~ 15분
+				endif				
 			else 
+			; 실내		
 				playLocationSound(_skyMode)
 			endif
 		endif
@@ -244,6 +414,11 @@ EndEvent
 Event OnCellLoad()
 	Log("OnCellLoad")	
 
+	location currentLocation = playerRef.GetCurrentLocation()
+	if currentLocation.GetParent()
+		prevVisitLocation = currentLocation.GetParent()
+	endif 
+	
 	bool _skip = false
 	while isLoadLocationChanged == true
 		utility.WaitMenuMode(0.1)
@@ -255,10 +430,25 @@ Event OnCellLoad()
 	endif
 EndEvent
 
-String function checkLocation(Location _location)
-	log("checkLocation ")	
+String function checkLocation(Location _location)	
 	String _visitLocation = ""
-	if _location		
+
+	if _location				
+		Location _pLocation = _location.GetParent() 
+		if _pLocation			
+			if _pLocation.HasKeyWordString("LocTypeTown") || _pLocation.HasKeyWordString("LocTypeCity") || _pLocation.HasKeyWordString("LocTypeSettlement") || _location.HasKeyWordString("LocTypeDwelling")
+				PlayerLocationInTown.setValue(1)
+			else 
+				PlayerLocationInTown.setValue(0)
+			endif
+		else 
+			if _pLocation.HasKeyWordString("LocTypeTown") || _pLocation.HasKeyWordString("LocTypeCity") || _pLocation.HasKeyWordString("LocTypeSettlement") || _location.HasKeyWordString("LocTypeDwelling")
+				PlayerLocationInTown.setValue(1)
+			else 
+				PlayerLocationInTown.setValue(0)
+			endif
+		endif
+
 		if _location.HasKeyWordString("LocTypeDwelling")
 			if _location.HasKeyWordString("LocTypeInn")	
 				_visitLocation = "inn"	
@@ -282,9 +472,7 @@ String function checkLocation(Location _location)
 					; other house				
 					_visitLocation = "house"
 				endif				
-			endif
-		elseif _location.HasKeyWordString("LocTypeTown")
-			_visitLocation = "town"										
+			endif									
 		elseif _location.HasKeyWordString("LocTypeFalmerHive")
 			_visitLocation = "falmerHive"
 		elseif _location.HasKeyWordString("LocTypeBanditCamp")
@@ -309,9 +497,8 @@ String function checkLocation(Location _location)
 			_visitLocation = "unknown"	
 		endif
 	endif
-
-	; LogKeywords(_location.GetKeywords())
-
+	
+	; log("checkLocation " + _visitLocation)
 	return _visitLocation
 endFunction 
 
@@ -322,6 +509,13 @@ Event OnItemAdded(Form akBaseItem, int aiItemCount, ObjectReference akItemRefere
 EndEvent
 
 Event OnItemRemoved(Form akBaseItem, int aiItemCount, ObjectReference akItemReference, ObjectReference akDestContainer)
+EndEvent
+
+;
+;	Sleep
+;
+Event OnSleepStart(float afSleepStartTime, float afDesiredSleepEndTime)
+	init()
 EndEvent
 
 Event OnUpdate()
@@ -342,65 +536,64 @@ function playLocationSound(int skyMode)
 	; 1 - Interior (SM_INTERIOR)
 	; 2 - Skydome only (SM_SKYDOME_ONLY)
 	; 3 - Full sky (SM_FULL)					
-	Log("location " + visitLocation + ", skyMode " + skyMode)
 
 	if skyMode <= 2; interior
 		if currentLocation.HasKeyWordString("LocTypeClearable")
 			if visitLocation == "falmerHive"
-				log("falmerHive location(c)")
+				; log("falmerHive location(c)")
 				SoundCoolTimePlay(SayLocationFalmerHiveSound, _delay=1.0, _coolTime=5.0, _mapIdx=1, _mapCoolTime=30.0)
 			elseif visitLocation == "animalDen"
-				log("animalDen location(c)")
+				; log("animalDen location(c)")
 				SoundCoolTimePlay(SayLocationAnimalDenSound, _delay=1.0, _coolTime=5.0, _mapIdx=1, _mapCoolTime=30.0)
 			elseif visitLocation == "forswornCamp"
-				log("forswornCamp location(c)")
+				; log("forswornCamp location(c)")
 				SoundCoolTimePlay(SayLocationBanditCampSound, _delay=1.0, _coolTime=5.0, _mapIdx=1, _mapCoolTime=30.0)
 			elseif visitLocation == "dungeon"
-				log("dungeon location(c)")
+				; log("dungeon location(c)")
 				SoundCoolTimePlay(SayLocationDungeonSound, _delay=1.0, _coolTime=5.0, _mapIdx=1, _mapCoolTime=30.0)
 			elseif visitLocation == "banditCamp"
-				log("banditCamp location(c)")
+				; log("banditCamp location(c)")
 				SoundCoolTimePlay(SayLocationBanditCampSound, _delay=1.0, _coolTime=5.0, _mapIdx=1, _mapCoolTime=30.0)
 			elseif visitLocation == "draugrCrypt"
-				log("draugrCrypt location(c)")
+				; log("draugrCrypt location(c)")
 				SoundCoolTimePlay(SayLocationDraugrCryptSound, _delay=1.0, _coolTime=5.0, _mapIdx=1, _mapCoolTime=30.0)
 			elseif visitLocation == "vampireLair"
-				log("vampireLair location(c)")
+				; log("vampireLair location(c)")
 				SoundCoolTimePlay(SayLocationVampireLairSound, _delay=1.0, _coolTime=5.0, _mapIdx=1, _mapCoolTime=30.0)
 			else 
 				SoundCoolTimePlay(SayLocationDungeonSound, _delay=1.0, _coolTime=5.0, _mapIdx=1, _mapCoolTime=30.0)
-				log("unknown location(c)")
+				; log("unknown location(c)")
 			endif
 		else 
 			if visitLocation == "home"
-				log("home location")
+				; log("home location")
 				SoundCoolTimePlay(SayLocationHomeSound, _delay=1.0, _coolTime=5.0, _mapIdx=1, _mapCoolTime=30.0)
 			elseif visitLocation == "house"
-				log("house location")
+				; log("house location")
 				SoundCoolTimePlay(SayLocationHouseSound, _delay=1.0, _coolTime=5.0, _mapIdx=1, _mapCoolTime=30.0)
 			elseif visitLocation == "inn"
-				log("inn location")
+				; log("inn location")
 				SoundCoolTimePlay(SayLocationInnSound, _delay=1.0, _coolTime=5.0, _mapIdx=1, _mapCoolTime=30.0)
 			elseif visitLocation == "store"
-				log("store location")
+				; log("store location")
 				SoundCoolTimePlay(SayLocationStoreSound, _delay=1.0, _coolTime=5.0, _mapIdx=1, _mapCoolTime=30.0)
 			elseif visitLocation == "temple"
-				log("temple location")
+				; log("temple location")
 				SoundCoolTimePlay(SayLocationTempleSound, _delay=1.0, _coolTime=5.0, _mapIdx=1, _mapCoolTime=30.0)
 			elseif visitLocation == "barrack"
-				log("barrack location")
+				; log("barrack location")
 				SoundCoolTimePlay(SayLocationBarrackSound, _delay=1.0, _coolTime=5.0, _mapIdx=1, _mapCoolTime=30.0)
 			elseif visitLocation == "castle"
-				log("castle location")
+				; log("castle location")
 				SoundCoolTimePlay(SayLocationCastleSound, _delay=1.0, _coolTime=5.0, _mapIdx=1, _mapCoolTime=30.0)
 			elseif visitLocation == "jail"
-				log("jail location")
+				; log("jail location")
 				SoundCoolTimePlay(SayLocationJailSound, _delay=1.0, _coolTime=5.0, _mapIdx=1, _mapCoolTime=30.0)		
 			elseif visitLocation == "orcHold"
-				log("orcHold location")
+				; log("orcHold location")
 				SoundCoolTimePlay(SayLocationOrcHoldSound, _delay=1.0, _coolTime=5.0, _mapIdx=1, _mapCoolTime=30.0)
 			else 						
-				log("unknown location")
+				; log("unknown location")
 				SoundCoolTimePlay(SayLocationUnknownSound, _delay=1.0, _coolTime=5.0, _mapIdx=1, _mapCoolTime=30.0)
 			endif
 		endif
@@ -412,7 +605,7 @@ function playLocationSound(int skyMode)
 endFunction
 
 function SoundCoolTimePlay(Sound _sound, float _volume = 0.8, float _coolTime = 1.0, float _delay = 0.0, int _mapIdx = 0, float _mapCoolTime = 1.0)
-	if playerRef.IsSwimming()
+	if !isGameRunning || playerRef.IsInCombat() || playerRef.IsSwimming() 
 		return
 	endif 	
 
@@ -420,59 +613,43 @@ function SoundCoolTimePlay(Sound _sound, float _volume = 0.8, float _coolTime = 
 	if isGameRunning && currentTime >= soundCoolTime.getValue() && currentTime >= coolTimeMap[_mapIdx]	 
 		soundCoolTime.setValue(currentTime + _coolTime)
 		coolTimeMap[_mapIdx] = currentTime + _mapCoolTime
-		if _delay != 0			
-			UnregisterForUpdate()
+
+		UnregisterForUpdate()
+		if _delay != 0.0						
 			runningCoolTimeSoundRes = _sound
 			runningCoolTimeSoundVolume = _volume			
 			RegisterForSingleUpdate(_delay)
 		else 
 			runningCoolTimeSoundRes = none
 			runningCoolTimeSoundVolume = 0.0
-			int _soundId = _sound.Play(playerRef)
-			Sound.SetInstanceVolume(_soundId, _volume)
+			Sound.SetInstanceVolume(_sound.Play(playerRef), _volume)
 		endif
 	endif
 endFunction
 
-int function SoundSwimmingPlay(Sound _sound, float _volumn = 0.8, int _mapIdx = 15, float _mapCoolTime = 3.0)
-	float currentTime = Utility.GetCurrentRealTime()
-	int soundId = 0
-	if isGameRunning && currentTime >= coolTimeMap[_mapIdx]
-		soundId = _sound.Play(playerRef)
-		Sound.SetInstanceVolume(soundId, _volumn)
-	endif
-	return soundId
-endFunction
-
-function SoundHelloPlay(Sound _sound, float _volumn = 0.8)
-	if playerRef.IsSwimming()
-		return
-	endif 	
-		
+function SoundHelloPlay(Sound _sound, float _volumn = 0.8, float _coolTime = 3.0)
+	soundCoolTime.setValue(Utility.GetCurrentRealTime() + _coolTime)
 	Sound.SetInstanceVolume(_sound.Play(playerRef), _volumn)		
 endFunction
 
-int function SoundBGPlay(Sound _sound, float _volume = 0.8)
-	int soundId = 0
-
-	if playerRef.IsSwimming()
-		return soundId
-	endif 	
-	
-	soundId = _sound.Play(playerRef)
-	Sound.SetInstanceVolume(soundId, _volume)	
-	return soundId
-endFunction
-
-function SoundVolumeUp(int _soundId, float _volume = 0.1)	
-	if playerRef.IsSwimming()
-		return
-	endif 
-
-	if _volume > 0.5 
-		_volume = 0.5
+function expression(string _type)
+	if _type == "happy"
+		playerRef.SetExpressionOverride(2, 70)				; happy
+	elseif _type == "sad"
+		playerRef.SetExpressionOverride(3, 70)				; sad
+	elseif _type == "angry"
+		playerRef.SetExpressionOverride(6, 70)				; angry
+	else
+		MfgConsoleFunc.ResetPhonemeModifier(playerRef)		; reset		
 	endif
-	Sound.SetInstanceVolume(_soundId, _volume)
+endfunction 
+
+int function GetGender(Actor ActorRef) global
+	if ActorRef
+		ActorBase BaseRef = ActorRef.GetLeveledActorBase()
+		return BaseRef.GetSex() ; Default
+	endIf
+	return 0 ; Invalid actor - default to male for compatibility
 endFunction
 
 function Log(string _msg)
@@ -495,6 +672,7 @@ ImmersivePcVoiceMCM property pcVoiceMCM Auto
 GlobalVariable property soundCoolTime Auto
 GlobalVariable property PlayerNakeState Auto
 GlobalVariable property PlayerDrunkState Auto
+GlobalVariable property PlayerLocationInTown Auto
 
 Actor property playerRef Auto
 
@@ -525,11 +703,13 @@ Sound property SayLocationEscapeDungeonSound Auto
 Sound property SayLocationUnknownSound Auto
 
 ; state	
-Sound property SayStateUnderWaterSound Auto	
-Sound property SayStateSneakSound Auto
 Sound property SayStateNakedSound Auto
 Sound property SayStateBareFeetSound Auto
 Sound property SayStateLowHealthSound Auto
+Sound property SayStatePoorClothesSound Auto
+Sound property SayStateComfortClothesSound Auto
+Sound property SayStateUncomfortClothesSound Auto
+Sound property SayStateUncomfortBootsSound Auto
 
 ; weather
 Sound property SayWeatherSunnySound Auto
@@ -537,11 +717,72 @@ Sound property SayWeatherWarmSound Auto
 Sound property SayWeatherRainySound Auto
 Sound property SayWeatherSnowSound Auto
 
-; drink
-Sound property SayDrinkAlcoholSound Auto
-Sound property SayDrinkPotionSound Auto
-Sound property SayDrinkAlcoholToxicSound Auto
+; dialogue
+Sound property SayDialogueNormalSound Auto		
+Sound property SayDialogueNormalChildSound Auto
+Sound property SayDialogueNormalGhostSound Auto
+Sound property SayDialogueNormalEnemySound Auto			
+Sound property SayDialogueNormalLoverSound Auto
+Sound property SayDialogueNormalLoverLoveSound Auto
+Sound property SayDialogueNormalFriendSound Auto
+Sound property SayDialogueNormalFollowerSound Auto
+Sound property SayDialogueNormalSoldierSound Auto
+Sound property SayDialogueNormalGuardSound Auto
+Sound property SayDialogueNormalJarlSound Auto
+Sound property SayDialogueNormalPristSound Auto
+Sound property SayDialogueNormalElderSound Auto	
+Sound property SayDialogueShySound Auto
 
-; sneak background
-Sound property SayBgSneakModeSound Auto
+Sound property SayDialoguePassiveSound Auto
+Sound property SayDialoguePassiveGuardSound Auto
+Sound property SayDialoguePassiveJarlSound Auto
+Sound property SayDialoguePassivePostmanSound Auto
+Sound property SayDialoguePassiveLoverSound Auto
+Sound property SayDialoguePassiveShySound Auto
+Sound property SayDialoguePassiveSexySound Auto
+Sound property SayDialoguePassiveIrritatedSound Auto
 
+Sound property SayDialogueEnvyAppearanceBeautyOnFemaleSound Auto
+Sound property SayDialogueEnvyAppearanceBeautyOnMaleSound Auto
+
+Sound property SayDialogueEnvyClothBeautyOnFemaleSound Auto
+Sound property SayDialogueEnvyClothBeautyOnMaleSound Auto
+
+Sound property SayDialogueWarnNakedOnFemaleSound Auto
+Sound property SayDialogueWarnNakedOnMaleSound Auto
+
+Sound property SayDialogueWarnBattleSound Auto
+Sound property SayDialogueWarnBattleChildSound Auto
+Sound property SayDialogueWarnBatleEnemySound Auto
+
+
+Sound property SayDialogueShyNakeSound Auto
+Sound property SayDialogueShyNakeOnChildSound Auto
+Sound property SayDialogueShyNakeOnBanditSound Auto
+
+Sound property SayDialogueSleepSound Auto		
+Sound property SayDialogueSleepChildSound Auto
+Sound property SayDialogueSleepLoverSound Auto
+
+Sound property SayDialogueSickSound Auto		
+Sound property SayDialogueSickChildSound Auto
+Sound property SayDialogueSickLoverSound Auto
+
+Sound property SayDefaultSound Auto
+
+; Race
+Race property ElderRace Auto
+
+; Faction
+Faction property BeautyFaction Auto
+Faction property CompanionFaction Auto
+
+Faction property CWDialogueSoldierFaction Auto
+Faction property BanditFaction Auto
+Faction property JobPriestFaction Auto
+Faction property JobJarlFaction Auto
+Faction property JobDeliveryFaction Auto
+Faction property DLC2RieklingFaction Auto
+Faction property HunterFaction Auto
+
+Faction property WoundedFaction Auto
