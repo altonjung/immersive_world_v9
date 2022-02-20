@@ -3,8 +3,6 @@ scriptname ImmersivePcVoiceStatusQuest extends Quest
 String version = "v0.1"
 
 event OnInit()
-	Debug.Notification("Load Immersive Pc Status " + version)
-	
 	Setup()
 endEvent
 

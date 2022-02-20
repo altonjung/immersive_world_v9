@@ -6,8 +6,12 @@ float[] coolTimeMap
 
 Sound  runningCoolTimeSoundRes
 float  runningCoolTimeSoundVolume
+float  runningCoolTimeSoundCurtime
+float  runningCoolTimeSoundCoolingTime
 
 float  bowDrawCalculate
+
+bool   isInjury
 
 Event OnInit()
 EndEvent
@@ -33,8 +37,13 @@ endFunction
 function init ()		
 	runningCoolTimeSoundRes = None
 	runningCoolTimeSoundVolume = 0.0
+	runningCoolTimeSoundCurtime = 0.0
+	runningCoolTimeSoundCoolingTime = 0.0
+
 	underAttackCountByAnimal = 0
 	underAttackCountByNpc = 0
+
+	isInjury = false
 
 	bowDrawCalculate = 0
 	coolTimeMap = new float[5]
@@ -56,12 +65,24 @@ function regAnimation ()
 endFunction
 
 Event OnAnimationEvent(ObjectReference akSource, string asEventName)
+	if !pcVoiceMCM.isGameRunning
+		return 
+	endif
+
 	if asEventName == "weaponDraw"
 		if playerRef.IsSneaking()
 			SoundCoolTimePlay(SayCombatStartSneakSound, _delay=0.3, _coolTime=3.0)
 		else 
-			SoundCoolTimePlay(SayCombatStartSound, _delay=0.3, _coolTime=3.0)
-		endif		
+			float volume = 0.4 
+			if pcVoiceMCM.isInField 
+				volume = 0.6
+			endif 
+			if playerRef.IsInCombat()
+				SoundCoolTimePlay(SayCombatBeginSound,_volume = volume, _delay=0.3, _coolTime=3.0)
+			else 
+				SoundCoolTimePlay(SayCombatIdleSound, _volume = volume, _delay=0.3, _coolTime=3.0)
+			endif
+		endif
 	elseif asEventName == "weaponLeftSwing" || asEventName == "weaponSwing"
 		bool isExpertLevel = false
 		; getSkill Level
@@ -92,20 +113,20 @@ Event OnAnimationEvent(ObjectReference akSource, string asEventName)
 			endif
 		endif
 	elseif asEventName == "bowDraw"
-		SoundCoolTimePlay(SoundEffectBowDrawInit, _delay=0.2, _volume=0.5, _coolTime=0.3, _mapIdx=1, _mapCoolTime=60.0)
+		SoundCoolTimePlay(SoundEffectBowDrawInit, _delay=0.1, _volume=0.5, _coolTime=0.3, _mapIdx=1, _mapCoolTime=30.0)
 		bowDrawCalculate = Utility.GetCurrentRealTime()
-	elseif asEventName == "bowDrawn"		
+	elseif asEventName == "bowDrawn"
 		float _skillLevel = playerRef.GetAV("Marksman")
-		if _skillLevel <= 40 || playerRef.GetActorValue("Stamina") <= 30.0
-			if Utility.RandomInt(0, 4) == 0
+		if _skillLevel <= 40
+			if Utility.RandomInt(0, 9) == 0		; 10%
 				Game.ShakeCamera(afDuration = 0.5)
 			endif
 		endif
-		
+
 		if playerRef.IsSneaking()
-			SoundCoolTimePlay(SayCombatBowDrawSneakSound, _delay=1.0, _volume=0.4, _coolTime=2.0, _mapIdx=2, _mapCoolTime=2.0)
+			SoundCoolTimePlay(SayCombatBowDrawSneakSound, _delay=0.7, _volume=0.4, _coolTime=2.0, _mapIdx=2, _mapCoolTime=2.0)
 		else
-			SoundCoolTimePlay(SayCombatBowDrawSound, _delay=1.0, _volume=0.5, _coolTime=2.0, _mapIdx=2, _mapCoolTime=2.0)
+			SoundCoolTimePlay(SayCombatBowDrawSound, _delay=0.7, _volume=0.5, _coolTime=2.0, _mapIdx=2, _mapCoolTime=2.0)
 		endif
 		bowDrawCalculate = Utility.GetCurrentRealTime()
 	endif
@@ -113,26 +134,32 @@ endEvent
 
 ; player bow release
 Event OnPlayerBowShot(Weapon akWeapon, Ammo akAmmo, float afPower, bool abSunGazing)
+	if !pcVoiceMCM.isGameRunning
+		return 
+	endif
+
 	clearRunnintSoundRes()
 
-	if akAmmo.HasKeyWordString("fireArrow")
-		soundPlay(SoundEffectFireRelease, 0.6)
-	endif 
+	if afPower >= 0.9		
+		if akAmmo.HasKeyWordString("fireArrow")
+			soundPlay(SoundEffectFireRelease, 0.6)
+		else
+			SoundPlay(SoundEffectBowRelease, 0.6)
+		endif 			
 
-	if afPower >= 0.8
-		SoundPlay(SoundEffectBowRelease, 0.6)
-
-		if afPower == 1.0
-			if playerRef.IsSneaking()
-				SoundCoolTimePlay(SayCombatBowReleaseSneakSound, _volume=0.4, _coolTime=0.5, _mapIdx=3, _mapCoolTime=0.5)
-			else
-				SoundCoolTimePlay(SayCombatBowReleaseSound, _volume=0.5, _coolTime=0.5, _mapIdx=3, _mapCoolTime=0.5)
-			endif
-		endif			
+		if playerRef.IsSneaking()
+			SoundCoolTimePlay(SayCombatBowReleaseSneakSound, _volume=0.4, _coolTime=1.0, _mapIdx=3, _mapCoolTime=0.5)
+		else
+			SoundCoolTimePlay(SayCombatBowReleaseSound, _volume=0.5, _coolTime=1.0, _mapIdx=3, _mapCoolTime=0.5)
+		endif
 	endif	
 EndEvent
 
 Event OnActorAction(int actionType, Actor akActor, Form source, int slot)
+	if !pcVoiceMCM.isGameRunning
+		return 
+	endif
+
 	if akActor == playerRef
 		if actionType == 1
 			Spell magicSpell = source as spell
@@ -162,8 +189,6 @@ Event OnActorAction(int actionType, Actor akActor, Form source, int slot)
 							elseif magicEffects[idxx].HasKeyWordString("MagicDamagePoison")
 								; Log("Magic Cast from RitualSpellEffect and MagicDamagePoison")
 								SoundCoolTimePlay(SayMagicPoisonRitualSound, _delay=0.5, _coolTime=3.0)
-							else 
-								Log("Magic Cast from RitualSpellEffect")
 							endif 
 							return 
 						elseif magicEffects[idxx].HasKeyWordString("MagicDamageFire")
@@ -216,21 +241,26 @@ Event OnActorAction(int actionType, Actor akActor, Form source, int slot)
 EndEvent
 
 Event OnActorKilled(Actor akVictim, Actor akKiller)
-	if akKiller == playerRef && playerRef.IsInCombat() == false
-		
+	if !pcVoiceMCM.isGameRunning
+		return 
+	endif
+
+	if akKiller == playerRef && playerRef.IsInCombat() == false		
 		if playerRef.IsSneaking()
 			SoundCoolTimePlay(SayCombatEndSneakSound, _delay=0.5, _volume=0.5)
 		else
 			SoundCoolTimePlay(SayCombatEndSound, _delay=0.5, _volume=0.5)
 		endif
 
-		playerRef.SheatheWeapon()
-		if akVictim.hasKeywordString("ActorTypeNPC")
-			Utility.Wait(0.3)
-			Debug.SendAnimationEvent(playerRef, "IdleGreybeardMeditateEnter")
-			Utility.Wait(3.0)
-			Debug.SendAnimationEvent(playerRef, "idleGreybeardMeditateExit")
-			utility.wait(2.0)
+		if playerRef.IsWeaponDrawn()
+			if pcVoiceMCM.enableCombatMotion
+				playerRef.SheatheWeapon()
+				if utility.randomInt(0,1) == 0
+					Debug.SendAnimationEvent(playerRef, "IdlePray")
+					Utility.Wait(0.7)
+					Debug.SendAnimationEvent(playerRef, "IdleForceDefaultState")
+				endif
+			endif
 		endif
 
 		underAttackCountByAnimal = 0
@@ -239,42 +269,53 @@ Event OnActorKilled(Actor akVictim, Actor akKiller)
 EndEvent
 
 Event OnHit(ObjectReference akAggressor, Form akSource, Projectile akProjectile, bool abPowerAttack, bool abSneakAttack, bool abBashAttack, bool abHitBlocked)	
-		
+	if !pcVoiceMCM.isGameRunning
+		return 
+	endif
+
 	if abHitBlocked
-	Else	
-		float healthValue = playerRef.GetActorValuePercentage("Health")	
-		float healthValuePercentage = playerRef.GetActorValuePercentage("Health")	
-		float _hitVolume = 0.5
-		if healthValuePercentage >= 0.7
-			_hitVolume = 0.1
-		elseif healthValuePercentage >= 0.5
-			_hitVolume = 0.2
-		elseif healthValuePercentage >= 0.3
-			_hitVolume = 0.3		
+	else		
+		weapon _weapon = akSource as weapon 
+		bool isStrong = isStrongWeapon(_weapon)
+		bool isBow = isBowWeapon(_weapon)
+		bool isUnarm = isUnarmWeapon(_weapon)
+		bool isWeak = isWeakWeapon(_weapon)
+		float healthValue = playerRef.GetActorValuePercentage("Health")
+
+		if pcVoiceMCM.wornArmor && pcVoiceMCM.wornArmor.IsHeavyArmor()
+			if isStrong || isBow
+				SoundPlay(SoundEffectHitSteelArmor, 0.4)
+			endif
 		endif
 
-		if abPowerAttack || abBashAttack
-
-			; heavy armor 인 경우 steel 사운드 출력
-			bool  wornStrongArmor = false
-			Armor _wornArmor = playerRef.GetWornForm(0x00000004) as Armor
-			
-			if _wornArmor
-				if _wornArmor.IsHeavyArmor()
-	
-					SoundPlay(SoundEffectHitSteelArmor, 0.6)
-					wornStrongArmor = true
+		if pcVoiceMCM.enableCombatMotion
+			if isBow
+				if isInjury == false					
+					int _random = Utility.randomInt(1, 10)
+					isInjury = TRUE
+					if _random > 7	; 30%
+						Debug.SendAnimationEvent(playerRef, "ImmStaggerBackSmall")
+						Utility.Wait(0.2)
+						if playerRef.IsWeaponDrawn()
+							playerRef.SheatheWeapon()
+							playerRef.DrawWeapon()
+						endif
+					endif
+					; Debug.SendAnimationEvent(playerRef, "IdleForceDefaultState")
+					isInjury = false
 				endif
-			endif		
+			endif
+		endif
 
-			; 옷 상태 처리
+		if abPowerAttack
+			float staminaValue = playerRef.GetActorValuePercentage("Stamina")
 			Actor aggressor = akAggressor as Actor
 
-			; 사람에 의한 강력한 공격으로 중갑옷이 벗겨질수 있음
-			if aggressor.HasKeyWordString("ActorTypeNPC")
+			; 무기에 의한 강력한 공격으로 중갑옷이 벗겨질수 있음
+			if isStrong
 				underAttackCountByNpc += 1
 
-				if underAttackCountByNpc > 15 && Utility.randomInt(0, 1) == 0
+				if (underAttackCountByNpc > 2 && staminaValue <= 0.15) || playerRef.IsBleedingOut()
 					Armor[] actorArmorList = new Armor[4]
 					actorArmorList[0]	= playerRef.GetWornForm(0x00000001) As Armor	; actorHead
 					actorArmorList[1] 	= playerRef.GetWornForm(0x00010000) as Armor	; actorChest/Cloak
@@ -295,34 +336,48 @@ Event OnHit(ObjectReference akAggressor, Form akSource, Projectile akProjectile,
 					underAttackCountByNpc /= 2
 				endif
 			; 동물들 공격에 의해 옷이 벗겨질 수 있음
-			elseif aggressor.HasKeyWordString("ActorTypeAnimal")
-				underAttackCountByAnimal += 1
+			elseif isUnarm 
+				if aggressor.HasKeyWordString("ActorTypeAnimal")	; unarm
+					underAttackCountByAnimal += 1
 
-				if underAttackCountByAnimal > 10 && Utility.randomInt(0, 1) == 0
-					Armor[] actorArmorList = new Armor[8]
-					actorArmorList[0]	= playerRef.GetWornForm(0x00000008) As Armor	; actorHand
-					actorArmorList[1]	= playerRef.GetWornForm(0x00000010) As Armor	; actorArm
-					actorArmorList[2] 	= playerRef.GetWornForm(0x00008000) as Armor	; actorSkirts
-					actorArmorList[3] 	= playerRef.GetWornForm(0x00800000) as Armor	; actorThigh
-					actorArmorList[4]	= playerRef.GetWornForm(0x00000080) As Armor	; actorBoot											
-					actorArmorList[5] 	= playerRef.GetWornForm(0x00010000) as Armor	; actorChest/Cloak					
-					actorArmorList[6]	= playerRef.GetWornForm(0x00000004) as Armor	; actorArmor		
-					actorArmorList[7] 	= playerRef.GetWornForm(0x00400000) as Armor	; actorPanty
-				
-					int idx = 0
-					while idx < actorArmorList.length 													
-						if actorArmorList[idx] && isWeakArmor(actorArmorList[idx])
-							playerRef.DropObject(actorArmorList[idx])
-							idx = actorArmorList.length 
-						endif
-						idx += 1
-					endwhile
-					underAttackCountByAnimal /= 2
+					if (underAttackCountByAnimal > 3 && staminaValue <= 0.25) || playerRef.IsBleedingOut()
+						Armor[] actorArmorList = new Armor[8]
+						actorArmorList[0]	= playerRef.GetWornForm(0x00000008) As Armor	; actorHand
+						actorArmorList[1]	= playerRef.GetWornForm(0x00000010) As Armor	; actorArm
+						actorArmorList[2] 	= playerRef.GetWornForm(0x00008000) as Armor	; actorSkirts
+						actorArmorList[3] 	= playerRef.GetWornForm(0x00800000) as Armor	; actorThigh
+						actorArmorList[4]	= playerRef.GetWornForm(0x00000080) As Armor	; actorBoot											
+						actorArmorList[5] 	= playerRef.GetWornForm(0x00010000) as Armor	; actorChest/Cloak					
+						actorArmorList[6]	= playerRef.GetWornForm(0x00000004) as Armor	; actorArmor		
+						actorArmorList[7] 	= playerRef.GetWornForm(0x00400000) as Armor	; actorPanty
+					
+						int idx = 0
+						while idx < actorArmorList.length 													
+							if actorArmorList[idx] && isWeakArmor(actorArmorList[idx])
+								playerRef.DropObject(actorArmorList[idx])
+								idx = actorArmorList.length 
+							endif
+							idx += 1
+						endwhile
+						underAttackCountByAnimal /= 2
+					endif
 				endif
-			; 용 불길로 인해 옷이 타버릴 수 있음
-			elseif aggressor.HasKeyWordString("ActorTypeDragon")
-				if Utility.randomInt(0,4) == 0
-					if checkFireSpell(akSource)				
+			elseif isWeak
+				;
+			; 불길로 인해 옷이 타버릴 수 있음
+			elseif checkFireSpell(akSource)
+				bool doStrip = false
+				if  aggressor.HasKeyWordString("ActorTypeDragon")
+					if Utility.randomInt(1, 10) > 7
+						doStrip = true
+					endif
+				else 
+					if Utility.randomInt(1, 10) > 9
+						doStrip = true
+					endif
+				endif
+
+				if doStrip
 						Armor[] actorArmorList = new Armor[6]
 						actorArmorList[0]	= playerRef.GetWornForm(0x00000001) As Armor	; actorHead
 						actorArmorList[1] 	= playerRef.GetWornForm(0x00010000) as Armor	; actorChest/Cloak
@@ -339,46 +394,61 @@ Event OnHit(ObjectReference akAggressor, Form akSource, Projectile akProjectile,
 							endif 							
 							idx += 1
 						endwhile
-					endif
 				endif
 			endif
-			SoundCoolTimePlay(SayCombatCriticalHitSound, _volume=_hitVolume, _coolTime=3.0)
+			SoundCoolTimePlay(SayCombatCriticalHitSound, _volume=0.4, _coolTime=3.0)
 		else 
-			if PlayerNakeState.GetValue() == 1
-				SoundCoolTimePlay(SayCombatCriticalHitSound, _volume=0.6, _coolTime=3.0)
-			else 
-				SoundCoolTimePlay(SayCombatHitSound, _volume=_hitVolume, _coolTime=3.0)
+			if pcVoiceMCM.isNaked
+				SoundCoolTimePlay(SayCombatCriticalHitSound, _volume=0.4, _coolTime=3.0)
+			else
+				SoundCoolTimePlay(SayCombatHitSound, _volume=0.3, _coolTime=3.0)
 			endif
 		endif
 			
-		if PlayerNakeState.GetValue() == 1
-			healthValue = healthValue / 20.0				
+		if pcVoiceMCM.isNaked
+			healthValue = (healthValue * 100) / 25.0				
 			playerRef.DamageActorValue("Health", healthValue)
 		endif
 
-		if PlayerDrunkState.GetValue() == 1
-			healthValue = healthValue / 10.0
+		if pcVoiceMCM.isDrunken
+			healthValue = (healthValue * 100) / 5.0
 			playerRef.DamageActorValue("Health", healthValue)
 		endif	
+
+		; pcVoiceMCM.log("hitVolume " + _hitVolume)
 	endif
 EndEvent
 
 ; Event received when an actor enters bleedout.
 Event OnEnterBleedout()
-	SoundCoolTimePlay(SayCombatBleedOutSound, _volume=0.4, _coolTime=5.0)
-	Log("OnEnterBleedout")
+	if !pcVoiceMCM.isGameRunning
+		return 
+	endif
+
+	SoundCoolTimePlay(SayCombatBleedOutSound, _volume=0.4, _coolTime=5.0)	
 EndEvent
 
 Event OnDying(Actor akKiller)
+	if !pcVoiceMCM.isGameRunning
+		return 
+	endif
+
 	SoundCoolTimePlay(SayCombatDyingSound, _volume=0.4, _coolTime=5.0)
-	Log("OnDying")
 EndEvent
 
 Event OnUpdate()
+	if !pcVoiceMCM.isGameRunning
+		return 
+	endif
+
 	; sound play
 	if runningCoolTimeSoundRes != None		
-		Sound.SetInstanceVolume(runningCoolTimeSoundRes.Play(playerRef), runningCoolTimeSoundVolume)
-		clearRunnintSoundRes()		
+		pcVoiceMCM.soundCoolTime = runningCoolTimeSoundCurtime + runningCoolTimeSoundCoolingTime
+		Sound.SetInstanceVolume(runningCoolTimeSoundRes.Play(playerRef), runningCoolTimeSoundVolume)		
+		runningCoolTimeSoundRes = none
+		runningCoolTimeSoundVolume = 0.0
+		runningCoolTimeSoundCoolingTime = 0.0
+		runningCoolTimeSoundCurtime = 0.0
 	endif
 EndEvent
 
@@ -386,7 +456,7 @@ EndEvent
 ;	Utility
 ;
 function clearRunnintSoundRes()	
-	soundCoolTime.setValue(0.0)
+	pcVoiceMCM.soundCoolTime = 0.0
 	runningCoolTimeSoundRes = none
 	UnregisterForUpdate()	
 endFunction
@@ -457,55 +527,104 @@ bool function checkFireSpell(form _akSource)
 endfunction
 
 function SoundCoolTimePlay(Sound _sound, float _volume = 0.8, float _coolTime = 0.5, float _delay = 0.0, int _mapIdx = 0, float _mapCoolTime = 1.0)
-	if pcVoiceMCM.enableCombatSound == false || playerRef.IsSwimming() 
+	if pcVoiceMCM.enableCombatSound == false || playerRef.IsSwimming()
 		return
 	endif
 
 	float currentTime = Utility.GetCurrentRealTime()
-	if currentTime >= soundCoolTime.getValue() && currentTime >= coolTimeMap[_mapIdx] 
-		soundCoolTime.setValue(currentTime + _coolTime)
-		coolTimeMap[_mapIdx] = currentTime + _mapCoolTime
-
-		UnregisterForUpdate()
-		if _delay != 0.0			
-			runningCoolTimeSoundRes = _sound
-			runningCoolTimeSoundVolume = _volume
-			RegisterForSingleUpdate(_delay)
-		else 
+	if currentTime > pcVoiceMCM.soundCoolTime && currentTime > coolTimeMap[_mapIdx] 
+		coolTimeMap[_mapIdx] = currentTime + _mapCoolTime + _delay		
+		if _delay == 0.0			
+			pcVoiceMCM.soundCoolTime = currentTime + _coolTime + _delay
 			runningCoolTimeSoundRes = none
 			runningCoolTimeSoundVolume = 0.0
 			int _soundId = _sound.Play(playerRef)
 			Sound.SetInstanceVolume(_soundId, _volume)
+		else 
+			runningCoolTimeSoundRes = _sound
+			runningCoolTimeSoundVolume = _volume
+			runningCoolTimeSoundCurtime = currentTime
+			runningCoolTimeSoundCoolingTime = _coolTime
+			UnregisterForUpdate()
+			RegisterForSingleUpdate(_delay)
 		endif
 	endif
 endFunction
 
 function SoundPlay(Sound _sound, float _volume = 0.8)
-	if pcVoiceMCM.enableCombatSound == false || playerRef.IsSwimming() 
+	if pcVoiceMCM.enableCombatSound == false || playerRef.IsSwimming()
 		return
 	endif
 
 	Sound.SetInstanceVolume(_sound.Play(playerRef), _volume)	
 endFunction
 
-function Log(string _msg)
-	MiscUtil.PrintConsole(_msg)
+;0=Fists
+;1=Swords
+;2=Daggers
+;3=War Axes
+;4=Maces
+;5=Greatswords
+;6=Battleaxes AND Warhammers
+;7=Bows
+;8=Staff
+;9=Crossbows
+
+bool function isBowWeapon(Weapon _weapon)
+	bool _return = false
+	int _weaponType = _weapon.GetWeaponType()
+
+	if _weaponType == 7 || _weaponType == 9
+		_return = true
+	endif
+
+	return _return
+endFunction
+
+bool function isWeakWeapon(Weapon _weapon)
+	bool _return = false
+	int _weaponType = _weapon.GetWeaponType()
+
+	if _weaponType == 1 || _weaponType == 2 || _weaponType == 8
+		_return = true
+	endif
+
+	return _return
+endFunction
+
+bool function isUnarmWeapon(Weapon _weapon)
+	bool _return = false
+	int _weaponType = _weapon.GetWeaponType()
+
+	if _weaponType == 0
+		_return = true
+	endif
+
+	return _return
+endFunction
+
+bool function isStrongWeapon(Weapon _weapon)
+	bool _return = false
+	int _weaponType = _weapon.GetWeaponType()
+
+	if _weaponType > 2 && _weaponType < 7
+		_return = true
+	endif
+
+	return _return
 endFunction
 
 ImmersivePcVoiceMCM property pcVoiceMCM Auto
-
-GlobalVariable property soundCoolTime Auto
-GlobalVariable property PlayerNakeState Auto
-GlobalVariable property PlayerDrunkState Auto
 
 Actor property playerRef Auto
 
 ; Combat
 	; start/end
-Sound property SayCombatStartSound Auto				
+Sound property SayCombatIdleSound Auto
+Sound property SayCombatBeginSound Auto
 Sound property SayCombatEndSound Auto				
 
-Sound property SayCombatStartSneakSound Auto				
+Sound property SayCombatStartSneakSound Auto
 Sound property SayCombatEndSneakSound Auto	
 
 	; under attack
@@ -582,4 +701,5 @@ Sound property SoundEffectFireRelease Auto
 
 ; steel armor hit
 Sound property SoundEffectHitSteelArmor Auto
+Sound property SoundEffectHitArrowHit Auto
 	
