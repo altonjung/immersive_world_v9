@@ -12,10 +12,4 @@ endEvent
 
 function Setup()
 	PO3_Events_Alias.RegisterForWeatherChange(actorRefAliasForMonologue)
-
-	PO3_Events_Alias.RegisterForBookRead(actorRefAliasForAction)
-	; PO3_Events_Alias.RegisterForDragonSoulGained(actorRefAliasForAction)
-	PO3_Events_Alias.RegisterForItemHarvested(actorRefAliasForAction)
-
-	PO3_Events_Alias.RegisterForActorKilled(actorRefAliasForCombat)
 endFunction

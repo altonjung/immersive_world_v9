@@ -28,6 +28,7 @@ EndEvent
 function setup()
 	pcVoiceMCM.soundCoolTime = 0.0
 	pcVoiceMCM.isDrunken = false
+	isGlobalDrunken.setValue(0)
 	pcVoiceMCM.isLocationClearable = false
 endFunction
 
@@ -96,6 +97,7 @@ Event OnSleepStart(float afSleepStartTime, float afDesiredSleepEndTime)
 
 	if !pcVoiceMCM.isInField
 		pcVoiceMCM.isDrunken = false 
+		isGlobalDrunken.setValue(0)
 		drinkCount = 0
 		drunkenStartTime = 0.0	
 		rainStartTime = 0.0
@@ -126,9 +128,11 @@ Event OnUpdate()
 		if currentHour >= drunkenStartTime + 3.0; 3 시간이 지나면 hang over
 			drinkCount = 0
 			pcVoiceMCM.isDrunken = false
-		else			
+			isGlobalDrunken.setValue(0)
+		else
 			if drinkCount >= 3
 				pcVoiceMCM.isDrunken = true
+				isGlobalDrunken.setValue(1)
 			endif
 		endif
 	endif
@@ -167,7 +171,7 @@ Event OnUpdate()
 		endif
 	endif
 
-	if pcVoiceMCM.isGameRunning && pcVoiceMCM.enterFirstTravel
+	if pcVoiceMCM.isGameRunning
 		; 젖은/마른 옷상태에 따른 음성 출력
 		if isClotheWet
 			if pcVoiceMCM.wornArmor && playerRef.GetItemCount(WetClothes) == 0
@@ -191,8 +195,8 @@ Event OnUpdate()
 		if pcVoiceMCM.isInField && !playerRef.IsInCombat()
 			float _currentTime = Utility.GetCurrentRealTime()
 			bool isSprint = playerRef.IsSprinting()
-			bool isRun = playerRef.IsRunning()
-			if !isSprint && !isRun
+			; bool isRun = playerRef.IsRunning()
+			if !isSprint
 				; player 상태에 따른 음성 출력
 				if playerRef.GetActorValuePercentage("Health") <= 0.3 && _currentTime >= coolTimeMap[3]
 					Debug.Notification("you low health")
@@ -323,3 +327,5 @@ Sound property SayWeatherRainySound Auto
 Sound property SayWeatherSnowSound Auto
 
 Armor property WetClothes Auto
+
+GlobalVariable Property isGlobalDrunken Auto 

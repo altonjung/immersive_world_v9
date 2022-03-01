@@ -9,6 +9,3 @@ endEvent
 function Setup()
 endFunction
 
-function Log(string msg)
-	MiscUtil.PrintConsole(msg)
-endFunction

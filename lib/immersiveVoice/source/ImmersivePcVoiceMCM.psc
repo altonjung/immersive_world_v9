@@ -7,7 +7,7 @@ Location property prevLocation Auto
 bool property isPlayerFemale = true Auto
 bool property isGameRunning Auto
 bool property isInventoryMenuMode Auto
-bool property enterFirstTravel Auto
+bool property isWeaponDraw Auto
 
 bool property isNaked Auto
 bool property isBareFoot Auto
@@ -54,6 +54,8 @@ Armor property wornArmor auto
 Armor property wornBoots auto
 Armor property wornCloak auto
 Armor property wornPanty auto
+Armor property ClothesPrisonerTunic Auto 
+
 ; Armor property wornShortHair auto
 ; Armor property wornLongHair auto
 
@@ -63,7 +65,7 @@ float property soundCoolTime Auto
 bool Property enableStatusSound = true Auto
 bool Property enableActionSound = true Auto
 bool Property enableCombatSound = true Auto
-bool Property enableCombatMotion = false Auto
+bool Property enableCombatMotion = true Auto
 bool Property enableDressMotion = true Auto
 
 Quest property pcVoiceMonologue Auto
@@ -77,7 +79,7 @@ int optionCombatMotionId
 int optionDressMotionId
 
 int function GetVersion()
-  return 20220228
+  return 20220101
 endFunction
 
 event OnConfigOpen()
@@ -91,7 +93,7 @@ endEvent
 
 Event OnGameReload()
 	parent.OnGameReload()
-	Debug.notification(GetVersion())
+	Debug.notification("monologueVer " + GetVersion())
 EndEvent
 
 event OnPageReset(string page)
@@ -147,7 +149,7 @@ event OnOptionSelect(int option)
 		if pcVoiceMonologue.IsRunning()
 		pcVoiceMonologue.setActive(enableCombatMotion)
 		endif
-	elseif optionCombatMotionId == option 
+	elseif optionDressMotionId == option 
 		enableDressMotion = !enableDressMotion
 		SetToggleOptionValue(optionDressMotionId, enableDressMotion)
 
@@ -344,6 +346,7 @@ endfunction
 function setNaked(actor _actor,bool _set)
 	if _set
 		isNaked = true
+		; Debug.Notification("bandit like you")
 		_actor.AddToFaction(FactionBanditFriend)
 		_actor.AddToFaction(FactionOrcFriend)
 		expression(_actor, "sad")
@@ -360,11 +363,18 @@ function updateActorArmorStatus(actor _actor)
 	wornCloak = _actor.GetWornForm(0x00010000) as Armor		; cloak
 	wornPanty = _actor.GetWornForm(0x00400000) as Armor		; panty
 	wornBoots = _actor.GetWornForm(0x00000080) as Armor		; boots
-	; wornShortHair = _actor.GetWornForm(0x00000002) as Armor	; hair short
-	; wornLongHair = _actor.GetWornForm(0x00000800) as Armor	; hair long
 
 	if wornArmor
 		setNaked(_actor, false)
+		if wornArmor == ClothesPrisonerTunic
+			; Debug.Notification("bandit like you")
+			_actor.AddToFaction(FactionBanditFriend)
+			_actor.AddToFaction(FactionOrcFriend)
+			expression(_actor, "sad")
+		elseif _actor.getFactionRank(FactionBanditFriend) > -2
+			_actor.RemoveFromFaction(FactionBanditFriend)
+			_actor.RemoveFromFaction(FactionOrcFriend)
+		endif
 	else 
 		setNaked(_actor, true)
 	endif 
@@ -410,6 +420,110 @@ int function GetGender(Actor _ActorRef)
 	return 0 ; Invalid actor - default to male for compatibility
 endFunction
 
+
+;0=Fists
+;1=Swords
+;2=Daggers
+;3=War Axes
+;4=Maces
+;5=Greatswords
+;6=Battleaxes AND Warhammers
+;7=Bows
+;8=Staff
+;9=Crossbows
+bool function isBowWeapon(Weapon _weapon)
+	bool _return = false
+	int _weaponType = _weapon.GetWeaponType()
+
+	if _weaponType == 7 || _weaponType == 9
+		_return = true
+	endif
+
+	return _return
+endFunction
+
+bool function isUnarmWeapon(Weapon _weapon)
+	bool _return = false
+	int _weaponType = _weapon.GetWeaponType()
+
+	if _weaponType == 0
+		_return = true
+	endif
+
+	return _return
+endFunction
+
+bool function isStrongWeapon(Weapon _weapon)
+	bool _return = false
+	int _weaponType = _weapon.GetWeaponType()
+
+	if _weaponType > 2 && _weaponType < 7
+		_return = true
+	endif
+
+	return _return
+endFunction
+
+bool function isStrongArmor(Armor _armor)	
+	if _armor.IsHeavyArmor()
+		return true
+	elseif _armor.IsLightArmor()
+		return true
+	elseif _armor.IsCuirass()
+		return true
+	elseif _armor.IsHelmet()
+		return true
+	endif
+	
+	return false
+endFunction 
+
+bool function isWeakArmor(Armor _armor)
+	if _armor.IsClothingBody()
+		return true
+	elseif _armor.IsClothingFeet()
+		return true
+	endif
+	return false
+endFunction 
+
+bool function isBurnArmor(Armor _armor)
+	if _armor.GetEnchantment() == none	; 마법옷이라면, burn 되지 않음
+		if _armor.IsClothingBody()
+			return true
+		endif
+	endif
+	return false
+endFunction 
+
+bool function checkFireSpell(form _akSource)
+	Spell magicSpell = _akSource as spell
+
+	if magicSpell
+		MagicEffect[] magicEffects = magicSpell.GetMagicEffects()
+
+		int idxx=0
+		while idxx < magicEffects.length
+			; 불 데미지라면 옷이 불에탐
+			if magicEffects[idxx].HasKeyWordString("MagicDamageFire")
+				return true
+			endif
+			idxx += 1
+		endwhile
+	endif
+
+	return false
+endfunction
+
 function Log(string _msg)
 	MiscUtil.PrintConsole(_msg)
 endFunction
+
+function Logs(Keyword[] _keywords)
+	int len = 0
+	while len < _keywords.length
+		MiscUtil.PrintConsole(_keywords[len].GetString())
+		len += 1
+	endwhile
+endFunction
+

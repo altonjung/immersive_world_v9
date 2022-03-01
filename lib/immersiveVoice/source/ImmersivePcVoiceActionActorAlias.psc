@@ -10,8 +10,12 @@ float  drunkenStartTime
 Faction possibleCrimeFaction	
 float[] coolTimeMap
 
-int    SneakBgSoundId
-float  sneakingBgSoundVolume
+; int    SneakSoundId
+; int	   SneakStepById
+; int    SneakBgSoundId
+; float  sneakingBgSoundVolume
+
+int    sneakStepCount
 
 int    underWaterSoundId
 float  underWaterSoundVolume
@@ -21,6 +25,9 @@ Sound  runningCoolTimeSoundRes
 float  runningCoolTimeSoundVolume
 float  runningCoolTimeSoundCurtime
 float  runningCoolTimeSoundCoolingTime
+
+bool   isharvest
+bool   isLockingMode
 
 int    footstepCount
 Event OnInit()
@@ -40,11 +47,16 @@ EndEvent
 
 function initMenu()	
 	UnregisterForAllMenus()
-	RegisterForMenu("MapMenu")		
+	RegisterForMenu("MapMenu")
 	RegisterForMenu("Journal Menu")
 	RegisterForMenu("ContainerMenu")
 	RegisterForMenu("Lockpicking Menu")
 	RegisterForMenu("Sleep/Wait Menu")
+	RegisterForMenu("BarterMenu")
+	RegisterForMenu("Crafting Menu")
+	RegisterForMenu("Training Menu")
+	RegisterForMenu("Book Menu")
+	RegisterForMenu("StatsMenu")
 endFunction
 
 function registerAction ()	
@@ -52,14 +64,14 @@ function registerAction ()
 endFunction
 
 function setup()
+	lockPickForm		   = Game.GetFormFromFile(0x000000A, "Skyrim.esm") as Form
 endFunction
 
 function init ()		
 	underWaterSoundId = 0
 	underWaterSoundVolume = 0.0
 
-	SneakBgSoundId = 0
-	sneakingBgSoundVolume = 0.0
+	sneakStepCount = 0
 
 	overHairRef = None	
 	controlActor = None
@@ -71,13 +83,17 @@ function init ()
 	runningCoolTimeSoundCoolingTime = 0.0
 
 	footstepCount = 0
+	isharvest = false
+	isLockingMode = false
 
 	coolTimeMap = new float[10] 
 endFunction
 
 function regAnimation ()
 	; key
-	RegisterForControl("Activate")	
+	RegisterForControl("Activate")
+	; RegisterForControl("Forward")
+	; RegisterForControl("Backward")
 
 	; sprint
 	RegisterForAnimationEvent(playerRef, "FootSprintLeft")	; foot left
@@ -87,8 +103,10 @@ function regAnimation ()
 	RegisterForAnimationEvent(playerRef, "BeginCastVoice")
 
 	; ride
-	RegisterForAnimationEvent(playerRef, "SoundPlay.NPCHorseMount") 	
-	RegisterForAnimationEvent(playerRef, "DragonMountEnter") 		
+	RegisterForAnimationEvent(playerRef, "SoundPlay.NPCHorseMount")
+	RegisterForAnimationEvent(playerRef, "SoundPlay.NPCHorseDismount")	
+	RegisterForAnimationEvent(playerRef, "DragonMountEnter")
+	RegisterForAnimationEvent(playerRef, "DragonMountExitOut")
 
 	; jump
 	RegisterForAnimationEvent(playerRef, "JumpUp")
@@ -103,50 +121,70 @@ function regAnimation ()
 	RegisterForAnimationEvent(playerRef, "MTState") 				; end
 endFunction
 
-Event OnControlDown(string control)	
+Event OnControlDown(string control)		
 	if !pcVoiceMCM.isGameRunning
 		return 
 	endif
 
-	overHairRef = Game.GetCurrentCrosshairRef()
-	If overHairRef != none
-		int _type = overHairRef.getType()
-		; pcVoiceMCM.Log("activator " + _type)
+	if control == "Activate"
+		overHairRef = Game.GetCurrentCrosshairRef()
+		If overHairRef != none
+			int _type = overHairRef.getType()
+			; pcVoiceMCM.Log("activator " + _type)
 
-		if _type == 61  ; activator/furniture
-			Activator akActivator= overHairRef.GetBaseObject() as Activator
-			if akActivator 
-				if akActivator.hasKeywordString("ActivatorPillar") || akActivator.hasKeywordString("ActivatorLever") || akActivator.hasKeywordString("ActivatorChain") || akActivator.hasKeywordString("DoorKeyHole")
-					SoundPlay(SayActionMoveLeverSound)
-					return
-				elseif akActivator.hasKeywordString("ActivatorTorch")
-					SoundPlay(SayActionTorchSound)
-					return
-				endif
-			endif
-
-			Furniture akFurniture = overHairRef.GetBaseObject() as Furniture
-			if akFurniture && (akFurniture.hasKeywordString("ActivatorLever") || akFurniture.hasKeywordString("ActivatorPillar") || akFurniture.hasKeywordString("ActivatorChain"))
-				SoundPlay(SayActionMoveLeverSound)
-				return
-			endif
-		elseif _type == 43 || _type == 62
-			Actor _akActor = overHairRef as Actor
-			if _akActor && _akActor.isDead()
-				if _akActor.HasKeyWordString("ActorTypeNPC")				
-					if _akActor.GetKiller() != playerRef
-						SoundCoolTimePlay(SayActionFoundDeadBodySound, _volume=0.5, _delay=0.0, _coolTime=2.0, _mapIdx=3, _mapCoolTime=2.0, _express="happy")
-					else 
-						SoundCoolTimePlay(SayActionSearchDeadBodySound, _volume=0.5, _delay=0.0, _coolTime=2.0, _mapIdx=3, _mapCoolTime=2.0, _express="happy")
+			if _type == 61  ; reference
+				Activator akActivator= overHairRef.GetBaseObject() as Activator
+				if akActivator 
+					if akActivator.hasKeywordString("ActivatorPillar") || akActivator.hasKeywordString("ActivatorLever") || akActivator.hasKeywordString("ActivatorChain") || akActivator.hasKeywordString("DoorKeyHole")
+						SoundPlay(SayActionMoveLeverSound)
+						return
+					elseif akActivator.hasKeywordString("ActivatorTorch")
+						SoundPlay(SayActionTorchSound)
+						return
 					endif
-				elseif _akActor.HasKeyWordString("ActorTypeAnimal")
-					SoundCoolTimePlay(SayActionSearchDeadCreatureSound, _volume=0.5, _delay=0.0, _coolTime=2.0, _mapIdx=3, _mapCoolTime=2.0, _express="happy")
-				else
-					SoundCoolTimePlay(SayActionSearchDeadCreatureSound, _volume=0.5, _delay=0.0, _coolTime=2.0, _mapIdx=3, _mapCoolTime=2.0, _express="angry")
 				endif
-				return
-			endif		
-		endif	
+
+				Furniture akFurniture = overHairRef.GetBaseObject() as Furniture
+				if akFurniture 
+					if akFurniture.hasKeywordString("ActivatorLever") || akFurniture.hasKeywordString("ActivatorPillar")
+						SoundPlay(SayActionMoveLeverSound)
+						return
+					elseif akFurniture.hasKeywordString("ActivatorChain")
+						SoundPlay(SayActionMoveChainSound)
+						return 
+					endif 
+				endif
+			elseif _type == 43 || _type == 62
+				Actor _akActor = overHairRef as Actor
+				if _akActor && _akActor.isDead()
+					float _curTime = Utility.GetCurrentRealTime()
+					if _curTime > coolTimeMap[3]
+						if _akActor.GetKiller() != playerRef
+							if _akActor.HasKeyWordString("ActorTypeNPC")
+								SoundCoolTimePlay(SayActionFoundDeadBodySound, _volume=0.5, _delay=0.0, _coolTime=2.0, _mapIdx=3, _mapCoolTime=30.0, _express="sad")
+							else 
+								SoundCoolTimePlay(SayActionCheckDeadBodySound, _volume=0.5, _delay=0.0, _coolTime=2.0, _mapIdx=3, _mapCoolTime=30.0, _express="sad")
+								; PlayerRef.MoveTo(_akActor, 5.0 * Math.Sin(_akActor.GetAngleZ()), 5.0 * Math.Cos(_akActor.GetAngleZ()), 0)
+								; SoundCoolTimePlay(SayActionCheckDeadBodySound, _volume=0.5, _delay=0.0, _coolTime=2.0, _mapIdx=3, _mapCoolTime=30.0, _express="sad")
+
+								; if _randomValue == 0
+								;  	Debug.SendanimationEvent(playerRef, "ImmCheckBodyByFoot")
+								; 	Utility.Wait(3.0)
+								; 	Debug.SendanimationEvent(PlayerRef, "IdleForceDefaultState")
+								; endif
+							endif
+						else
+							; check dead body reaction
+							if _akActor.HasKeyWordString("ActorTypeNPC")
+								SoundCoolTimePlay(SayActionSearchDeadBodySound, _volume=0.5, _delay=0.0, _coolTime=2.0, _mapIdx=3, _mapCoolTime=30.0, _express="happy")
+							else
+								SoundCoolTimePlay(SayActionSearchDeadCreatureSound, _volume=0.5, _delay=0.0, _coolTime=2.0, _mapIdx=3, _mapCoolTime=30.0, _express="angry")
+							endif
+						endif
+					endif
+				endif		
+			endif	
+		endif
 	endif
 EndEvent
 
@@ -196,30 +234,20 @@ Event OnAnimationEvent(ObjectReference akSource, string asEventName)
 		endif		
 	endif
 
-	if asEventName == "JumpUp"		
+	if asEventName == "JumpUp"
 		SoundPlay(SayActionJumpUpSound, 0.2)		
 	elseif asEventName == "tailSneakIdle"
-		; 만약 손에 활을 들고 있다면, sneak BG 출력 무시
-		if  playerRef.GetEquippedItemType(0) != 7 && playerRef.GetEquippedItemType(1) != 7 	;bow			
-
-			if SneakBgSoundId == 0
-				SneakBgSoundId = SoundBGPlay(SayBgSneakModeSound, sneakingBgSoundVolume)			
+		if !playerRef.IsInCombat() && !pcVoiceMCM.isWeaponDraw
+			if sneakStepCount == 0
+				sneakStepCount += 1
+				SoundCoolTimePlay(SayActionSneakSound, _delay=0.5, _volume=0.3, _coolTime = 5.5)
 			else 
-				sneakingBgSoundVolume += 0.1
-				SoundVolumeUp(SneakBgSoundId, sneakingBgSoundVolume)
-
-				if sneakingBgSoundVolume == 0.1					
-					SoundBGPlay(SayActionSneakSound, _volume=0.4)					
-				endif
-			endif
+				SoundCoolTimePlay(SayActionSneakStepBySound, _volume=0.3, _coolTime = 4.0)
+			endif 
 		endif
 	elseif asEventName == "tailMTIdle"
 		; sneak -> stand idle
-		if SneakBgSoundId != 0
-			Sound.StopInstance(SneakBgSoundId)			
-			SneakBgSoundId = 0
-			sneakingBgSoundVolume = 0.0
-		endif				
+		sneakStepCount = 0			
 	elseif asEventName == "SoundPlay.FSTSwimSwim"	
 		int tempId = SoundSwimmingPlay(SayActionUnderWaterSound, underWaterSoundVolume)
 		
@@ -236,12 +264,13 @@ Event OnAnimationEvent(ObjectReference akSource, string asEventName)
 			Sound.StopInstance(underWaterSoundId)
 		endif
 		underWaterSoundId = 0
-		underWaterSoundVolume = 0.0			
+		underWaterSoundVolume = 0.0					
 	elseif asEventName == "SoundPlay.NPCHorseMount"	|| asEventName == "DragonMountEnter"
-		; log("SoundPlay.NPCHorseMount")
-		SoundCoolTimePlay(SayActionRidingSound, _delay=0.2, _coolTime=1.5, _mapIdx=0, _mapCoolTime=1.5)				
+		isGlobalMounted.setValue(1)
+		SoundCoolTimePlay(SayActionRidingSound, _delay=0.2, _coolTime=1.5, _mapIdx=0, _mapCoolTime=1.5)
+	elseif asEventName == "SoundPlay.NPCHorseDismount"	|| asEventName == "DragonMountExitOut"
+		isGlobalMounted.setValue(0)
 	endif
-	; Log("OnAnimationEvent " + asEventName)
 endEvent
 
 ;
@@ -321,20 +350,33 @@ Event OnMagicEffectApply(ObjectReference akCaster, MagicEffect akEffect)
 	endif 
 EndEvent
 
-Event OnBookRead(Book akBook)
-	if !pcVoiceMCM.isGameRunning
-		return 
+Event OnItemAdded(Form akBaseItem, int aiItemCount, ObjectReference akItemReference, ObjectReference akSourceContainer)
+	if isharvest == false && akBaseItem.hasKeywordString("ValuableItem")
+		SoundCoolTimePlay(SayActionHarvestedPreciousSound, _delay=0.5, _coolTime=3.0, _mapIdx=6, _mapCoolTime=2.0)		
 	endif
-
-	SoundCoolTimePlay(SayActionBookReadSound, _delay=0.2, _coolTime=2.0, _mapIdx=5, _mapCoolTime=2.0)
+	isharvest = false
 EndEvent
 
 Event OnItemHarvested(Form akProduce)
-	if !pcVoiceMCM.isGameRunning
+	if !pcVoiceMCM.isGameRunning || playerRef.IsInCombat()
 		return 
-	endif
+	endif	
 
-	SoundCoolTimePlay(SayActionHarvestedSound, _delay=0.5, _coolTime=2.0, _mapIdx=7, _mapCoolTime=2.0)
+	isharvest = true
+	if akProduce.hasKeywordString("ValuableItem")
+		SoundCoolTimePlay(SayActionHarvestedPreciousSound, _delay=0.5, _coolTime=2.0, _mapIdx=7, _mapCoolTime=2.0)				
+	else 
+		SoundCoolTimePlay(SayActionHarvestedSound, _delay=0.5, _coolTime=2.0, _mapIdx=7, _mapCoolTime=2.0)
+	endif
+EndEvent
+
+Event OnItemRemoved(Form akBaseItem, int aiItemCount, ObjectReference akItemReference, ObjectReference akDestContainer)
+	if isLockingMode
+		if akBaseItem == lockPickForm && aiItemCount == 1
+			utility.waitMenuMode(0.5)
+			SoundCoolTimePlay(SayActionSneakTrySound, _coolTime=2.0, _mapIdx=7, _mapCoolTime=2.0)
+		endif
+	endif 
 EndEvent
 
 ; Event OnLevelIncrease(int aiLevel)
@@ -359,35 +401,23 @@ Event OnSit(ObjectReference akFurniture)
 	int furnitureType = PO3_SKSEFunctions.GetFurnitureType(_akFurniture)
 
 	if furnitureType == 1  ; lean
-		if akFurniture.HasKeywordString("CraftingCookpot")
-			SoundCoolTimePlay(SayActionCookingSound, _delay=0.2, _coolTime=3.0, _mapIdx=8, _mapCoolTime=3.0)
-		elseif akFurniture.HasKeywordString("CraftingTanningRack")
-			SoundCoolTimePlay(SayActionTanningSound, _delay=0.2, _coolTime=3.0, _mapIdx=8, _mapCoolTime=3.0)
-		elseif akFurniture.HasKeywordString("CraftingSmithingForge") || akFurniture.HasKeywordString("CraftingTanningRack") || akFurniture.HasKeyWordString("CraftingSmelter") || akFurniture.HasKeywordString("CraftingSmithingSharpeningWheel")		
-			SoundCoolTimePlay(SayActionSmithingSound, _delay=0.2, _coolTime=3.0, _mapIdx=8, _mapCoolTime=3.0)
-		elseif akFurniture.HasKeywordString("CraftingSmithingArmorTable") ||  akFurniture.HasKeyWordString("WICraftingAlchemy") || akFurniture.HasKeyWordString("WICraftingEnchanting") || akFurniture.HasKeywordString("BYOHCarpenterTable")
-			SoundCoolTimePlay(SayActionSmithingSound, _delay=0.2, _coolTime=3.0, _mapIdx=8, _mapCoolTime=3.0)
-		elseif akFurniture.HasKeyWordString("FurnitureWoodChoppingBlock") || akFurniture.HasKeyWordString("isPickaxeFloor") || akFurniture.HasKeyWordString("isPickaxeWall")	
+		if akFurniture.HasKeyWordString("FurnitureWoodChoppingBlock") || akFurniture.HasKeyWordString("isPickaxeFloor") || akFurniture.HasKeyWordString("isPickaxeWall")	
 			SoundCoolTimePlay(SayActionChoppingSound, _delay=0.2, _coolTime=3.0, _mapIdx=8, _mapCoolTime=3.0)
-		elseif akFurniture.hasKeywordString("ActivatorLever") || akFurniture.hasKeywordString("ActivatorPillar") || akFurniture.hasKeywordString("ActivatorChain")
-			SoundCoolTimePlay(SayActionChoppingSound, _delay=0.2, _coolTime=3.0, _mapIdx=8, _mapCoolTime=3.0)
-		else
-			SoundCoolTimePlay(SayActionSitDefaultSound, _delay=0.5, _coolTime=3.0, _mapIdx=1, _mapCoolTime=3.0)		
 		endif
 	elseif furnitureType == 0 || furnitureType == 2  ; sit
 		if pcVoiceMCM.isNaked
-			SoundCoolTimePlay(SayStateNakedSound, _delay=0.5, _coolTime=5.0, _mapIdx=2, _mapCoolTime=30)
+			SoundCoolTimePlay(SayStateNakedSound, _delay=0.5, _coolTime=5.0, _mapIdx=2, _mapCoolTime=15)
 		elseif pcVoiceMCM.isDrunken
-			SoundCoolTimePlay(SayStateNakedSound, _delay=0.5, _coolTime=5.0, _mapIdx=2, _mapCoolTime=30)
+			SoundCoolTimePlay(SayStateNakedSound, _delay=0.5, _coolTime=5.0, _mapIdx=2, _mapCoolTime=15)
 		else
 			if pcVoiceMCM.wornArmor && pcVoiceMCM.wornArmor.HasKeyWordString("ClothingSlave")								
-				SoundCoolTimePlay(SayStatePoorClothesSound, _delay=0.5, _coolTime=5.0, _mapIdx=2, _mapCoolTime=30)
-			elseif pcVoiceMCM.wornArmor && (pcVoiceMCM.wornArmor.HasKeyWordString("ClothingSlutty") || pcVoiceMCM.wornArmor.HasKeyWordString("SOS_Revealing") || pcVoiceMCM.wornArmor.HasKeyWordString("ClothingSexy") || pcVoiceMCM.wornArmor.HasKeyWordString("ClothingBeauty"))
-				SoundCoolTimePlay(SayStateUncomfortClothesSound, _delay=0.5, _coolTime=5.0, _mapIdx=2, _mapCoolTime=30)
+				SoundCoolTimePlay(SayStatePoorClothesSound, _delay=0.5, _coolTime=5.0, _mapIdx=2, _mapCoolTime=15)
+			elseif pcVoiceMCM.wornArmor && (pcVoiceMCM.wornArmor.HasKeyWordString("ClothingSlutty") || pcVoiceMCM.wornArmor.HasKeyWordString("ClothingSexy"))
+				SoundCoolTimePlay(SayStateUncomfortClothesSound, _delay=0.5, _coolTime=5.0, _mapIdx=2, _mapCoolTime=15)
 			elseif pcVoiceMCM.wornBoots && pcVoiceMCM.wornBoots.HasKeyWordString("ArmorHeels")
-				SoundCoolTimePlay(SayStateUncomfortBootsSound, _delay=0.5, _coolTime=5.0, _mapIdx=2, _mapCoolTime=30)
+				SoundCoolTimePlay(SayStateUncomfortBootsSound, _delay=0.5, _coolTime=5.0, _mapIdx=2, _mapCoolTime=15)
 			elseif pcVoiceMCM.isBareFoot
-				SoundCoolTimePlay(SayStateBareFeetSound, _delay=0.5, _coolTime=5.0, _mapIdx=2, _mapCoolTime=30)
+				SoundCoolTimePlay(SayStateBareFeetSound, _delay=0.5, _coolTime=5.0, _mapIdx=2, _mapCoolTime=15)
 			else
 				if Utility.randomInt(0, 3) >= 1
 					SoundCoolTimePlay(SayActionSitSound, _delay=0.5, _coolTime=3.0, _mapIdx=2, _mapCoolTime=15)
@@ -397,7 +427,11 @@ Event OnSit(ObjectReference akFurniture)
 			endif	
 		endif
 	elseif  furnitureType == 3 ; sleep
-		SoundCoolTimePlay(SayActionSitDefaultSound, _delay=0.5, _coolTime=3.0, _mapIdx=1, _mapCoolTime=3.0)
+		if pcVoiceMCM.isInField 
+			SoundCoolTimePlay(SayActionGoToRollBedSound, _delay=0.5, _coolTime=3.0, _mapIdx=1, _mapCoolTime=3.0)
+		else 
+			SoundCoolTimePlay(SayActionGoToBedSound, _delay=0.5, _coolTime=3.0, _mapIdx=1, _mapCoolTime=3.0)
+		endif
 	endif
 EndEvent
 
@@ -410,6 +444,7 @@ EndEvent
 ;	Menu
 ;
 Event OnMenuOpen(string menuName)
+	; pcVoiceMCM.log("menu " + menuName)
 	if !pcVoiceMCM.isGameRunning
 		return 
 	endif
@@ -424,18 +459,51 @@ Event OnMenuOpen(string menuName)
 		endif		
 	elseif menuName == "Lockpicking Menu"
 		lastOverHairContainerRef = Game.GetCurrentCrosshairRef()		
+		isLockingMode = true
 	elseif menuName == "Sleep/Wait Menu"
+		utility.waitMenuMode(0.2)
 		if playerRef.GetSleepState() == 3
 			SoundPlay(SayActionSleepSound, _volume=0.7)
 		else 
 			SoundPlay(SayActionWaitSound, _volume=0.7)
+		endif	
+	elseif menuName == "BarterMenu"
+		utility.waitMenuMode(0.5)
+		SoundCoolTimePlay(SayActionBarterSound, _coolTime=2.0, _mapIdx=5, _mapCoolTime=2.0)
+	elseif menuName == "Crafting Menu"
+		ObjectReference _furniture = playerRef.GetFurnitureReference()
+		if _furniture
+			utility.waitMenuMode(0.2)
+			Furniture _akFurniture = _furniture.GetBaseObject() as Furniture		
+			if _akFurniture.HasKeywordString("CraftingCookpot")				
+				SoundCoolTimePlay(SayActionCookingSound, _coolTime=3.0, _mapIdx=8, _mapCoolTime=3.0)
+			elseif _akFurniture.HasKeywordString("CraftingTanningRack")
+				SoundCoolTimePlay(SayActionTanningSound, _coolTime=3.0, _mapIdx=8, _mapCoolTime=3.0)
+			elseif _akFurniture.HasKeywordString("CraftingSmithingSharpeningWheel")
+				SoundCoolTimePlay(SayActionSharpingSound, _coolTime=3.0, _mapIdx=8, _mapCoolTime=3.0)
+			elseif _akFurniture.HasKeywordString("CraftingSmithingForge") || _akFurniture.HasKeyWordString("CraftingSmelter")
+				SoundCoolTimePlay(SayActionSmithingSound, _coolTime=3.0, _mapIdx=8, _mapCoolTime=3.0)
+			elseif _akFurniture.HasKeywordString("CraftingSmithingArmorTable") ||  _akFurniture.HasKeyWordString("WICraftingAlchemy") || _akFurniture.HasKeyWordString("WICraftingEnchanting") || _akFurniture.HasKeywordString("BYOHCarpenterTable")
+				SoundCoolTimePlay(SayActionSmithingSound, _coolTime=3.0, _mapIdx=8, _mapCoolTime=3.0)
+			endif
 		endif
+	elseif menuName == "Training Menu"
+		utility.waitMenuMode(0.5)
+		SoundCoolTimePlay(SayActionTrainingSound, _coolTime=2.0, _mapIdx=5, _mapCoolTime=2.0)
+	elseif menuName == "Book Menu"
+		utility.waitMenuMode(0.5)
+		SoundCoolTimePlay(SayActionBookReadSound, _coolTime=2.0, _mapIdx=5, _mapCoolTime=2.0)
+	elseif menuName == "StatsMenu"
+		utility.waitMenuMode(0.5)
+		SoundCoolTimePlay(SayActionStatSound, _coolTime=2.0, _mapIdx=5, _mapCoolTime=2.0)
 	endif
 endEvent
 
 Event OnMenuClose(string menuName)
 	if menuName == "Sleep/Wait Menu"
 		Game.FadeOutGame(false, true, 0.5, 3.0)
+	elseif menuName == "Lockpicking Menu"
+		isLockingMode = false		
 	endif	
 endEvent
 
@@ -450,7 +518,7 @@ Event OnUpdate()
 		runningCoolTimeSoundVolume = 0.0
 		runningCoolTimeSoundCoolingTime = 0.0
 		runningCoolTimeSoundCurtime = 0.0		
-		runningCoolTimeExpress = "happy"
+		runningCoolTimeExpress = "happy"	
 	endif
 endEvent
 ;
@@ -485,25 +553,15 @@ function SoundCoolTimePlay(Sound _sound, float _volume = 0.8, float _coolTime = 
 endFunction
 
 function SoundPlay(Sound _sound, float _volume = 0.8)	
-	if pcVoiceMCM.enableActionSound == false || playerRef.IsSwimming()
+	if pcVoiceMCM.enableActionSound == false || playerRef.IsSwimming() || playerRef.IsInCombat()
 		return
 	endif 
 	
 	Sound.SetInstanceVolume(_sound.Play(playerRef), _volume)
 endFunction
 
-int function SoundBGPlay(Sound _sound, float _volume = 0.8)	
-	int soundId = 0
-	if pcVoiceMCM.enableActionSound == false || playerRef.IsSwimming()
-		return soundId
-	endif 
-	soundId = _sound.Play(playerRef)	
-	Sound.SetInstanceVolume(soundId, _volume)
-	return soundId
-endFunction
-
 function SoundVolumeUp(int _soundId, float _volume = 0.1)	
-	if playerRef.IsSwimming()
+	if pcVoiceMCM.enableActionSound == false || playerRef.IsSwimming() || playerRef.IsInCombat()
 		return
 	endif 
 
@@ -534,7 +592,9 @@ Sound property SayActionTorchSound Auto
 Sound property SayActionUnderWaterSound Auto
 Sound property SayActionLockDoorSound Auto
 Sound property SayActionMoveLeverSound Auto
-Sound property SayActionHarvestedSound Auto			
+Sound property SayActionMoveChainSound Auto
+Sound property SayActionHarvestedSound Auto
+Sound property SayActionHarvestedPreciousSound Auto
 Sound property SayActionBookReadSound Auto			
 Sound property SayActionDragonSoulSound Auto
 Sound property SayActionJumpUpSound Auto
@@ -543,11 +603,16 @@ Sound property SayActionSitSound Auto
 Sound property SayActionSitDefaultSound Auto
 Sound property SayActionSleepSound Auto
 Sound property SayActionGoToBedSound Auto
+Sound property SayActionGoToRollBedSound Auto
 Sound property SayActionWaitSound Auto
 Sound property SayActionTravelSound Auto
 Sound property SayActionRidingSound Auto
 Sound property SayActionSneakSound Auto
+Sound property SayActionSneakStepBySound Auto
+; Sound property SayActionSneakBgSound Auto
+Sound property SayActionSneakTrySound Auto
 Sound property SayActionSuccessSound Auto
+Sound property SayActionCheckDeadBodySound Auto
 Sound property SayActionFoundDeadBodySound Auto
 Sound property SayActionSearchDeadBodySound Auto
 Sound property SayActionSearchDeadCreatureSound Auto
@@ -556,6 +621,10 @@ Sound property SayActionCookingSound Auto
 Sound property SayActionSmithingSound Auto
 Sound property SayActionChoppingSound Auto
 Sound property SayActionTanningSound Auto
+Sound property SayActionSharpingSound Auto
+Sound property SayActionTrainingSound Auto
+Sound property SayActionBarterSound Auto
+Sound property SayActionStatSound Auto
 
 Sound property SayActionRitualSound Auto
 Sound property SayActionRitualMaraSound Auto
@@ -587,5 +656,8 @@ Sound property SoundActionRobeRightStep Auto
 Sound property SoundActionCloak Auto
 
 ; etc
-Sound property SayBgSneakModeSound Auto
 Sound property SayDefaultSound Auto
+
+FORM property  lockPickForm auto hidden
+
+GlobalVariable Property isGlobalMounted Auto
