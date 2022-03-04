@@ -178,7 +178,7 @@ Event OnUpdate()
 				WetClothes.SetWeight(pcVoiceMCM.wornArmor.GetWeight() * 1.5)
 				playerRef.additem(WetClothes, 1)
 				SoundCoolTimePlay(SayEffectWetClothSound, _coolTime=3.0)	
-				Debug.Notification("wet blanket")
+				Debug.Notification("your clothes soaked")
 			endif
 
 			if warmStartTime > 0.0
@@ -187,26 +187,25 @@ Event OnUpdate()
 					wetStartTime = 0.0
 					playerRef.removeItem(WetClothes, playerRef.GetItemCount(WetClothes))
 					SoundCoolTimePlay(SayEffectDryClothSound, _coolTime=3.0)
-					Debug.Notification("dried blanket out")
+					Debug.Notification("your clothes dried out")
 				endif
 			endif
 		endif
 
 		if pcVoiceMCM.isInField && !playerRef.IsInCombat()
-			float _currentTime = Utility.GetCurrentRealTime()
-			bool isSprint = playerRef.IsSprinting()
+			float _currentTime = Utility.GetCurrentRealTime()			
 			; bool isRun = playerRef.IsRunning()
-			if !isSprint
+			if playerRef.IsRunning() || playerRef.IsSprinting()
 				; player 상태에 따른 음성 출력
 				if playerRef.GetActorValuePercentage("Health") <= 0.3 && _currentTime >= coolTimeMap[3]
-					Debug.Notification("you low health")
+					; Debug.Notification("you low health")
 					SoundCoolTimePlay(SayStateLowHealthSound, _coolTime=5.0, _mapIdx=3, _mapCoolTime=180.0 * Utility.RandomInt(1, 2))
 				elseif pcVoiceMCM.isDrunken && _currentTime >= coolTimeMap[1]
-					Debug.Notification("you drunken")
+					; Debug.Notification("you drunken")
 					Game.ShakeCamera(afDuration = 2.0)
 					SoundCoolTimePlay(SayStateDrunkenSound, _coolTime=5.0, _mapIdx=1, _mapCoolTime=450.0 * Utility.RandomInt(1, 2))
 				elseif pcVoiceMCM.isNaked && _currentTime >= coolTimeMap[2]
-					Debug.Notification("you naked")
+					; Debug.Notification("you naked")
 					Game.ShakeCamera(afDuration = 0.5)
 					SoundCoolTimePlay(SayStateNakedSound, _coolTime=5.0, _mapIdx=2, _mapCoolTime=300.0 * Utility.RandomInt(1, 2))
 				else 
@@ -219,7 +218,7 @@ Event OnUpdate()
 					else 
 						if pcVoiceMCM.isInTown && !pcVoiceMCM.isNaked
 							SoundCoolTimePlay(SayStateComfortClothesSound, _coolTime=7.0, _mapIdx=0, _mapCoolTime=500.0 * Utility.RandomInt(1, 2))
-						endif						
+						endif
 					endif
 				endif
 			else

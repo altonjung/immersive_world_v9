@@ -8,7 +8,17 @@ float  runningCoolTimeSoundVolume
 float  runningCoolTimeSoundCurtime
 float  runningCoolTimeSoundCoolingTime
 
+Sound  playDressSound
+String playDressExpress
+String playClotheCheckAnimation
+float  playDressAnimationDelay
+float  playDressSoundDelay
+bool   isDressPlay
+bool   isInventoryMode
+bool   shouldPlayNaked
+
 Event OnInit()
+	; initMenu()	
 EndEvent
 
 event OnLoad()
@@ -30,17 +40,119 @@ function setup()
 	; endif
 endFunction
 
+; function initMenu()	
+; 	; UnregisterForAllMenus()
+; 	; RegisterForMenu("InventoryMenu")
+; endFunction
+
 function init ()
+	UnregisterForMenu("InventoryMenu")
+	RegisterForMenu("InventoryMenu")
+
 	runningCoolTimeSoundRes = None
 	runningCoolTimeSoundVolume = 0.0
 	runningCoolTimeExpress = "happy"
 	runningCoolTimeSoundCurtime = 0.0
 	runningCoolTimeSoundCoolingTime = 0.0
+	
+    playDressSound = none
+    playDressExpress = ""
+	playClotheCheckAnimation = ""
+    playDressAnimationDelay = 2.0
+    playDressSoundDelay = 0.3
+	isDressPlay = false
+	isInventoryMode = false
+	shouldPlayNaked = false
 
 	undressCount = 0
 	UnregisterForUpdate()
 endFunction
 
+;
+;	Menu
+;
+Event OnMenuOpen(string menuName)
+	if menuName == "InventoryMenu"
+		isInventoryMode = true
+	endif
+endEvent
+
+Event OnMenuClose(string menuName)
+	if menuName == "InventoryMenu"
+		if !playerRef.IsInCombat() && isDressPlay == false
+			isDressPlay = true
+			if player.isNaked && shouldPlayNaked
+				; naked 출력
+				Sound _playSound = none
+				if !pcVoiceMCM.isInHome
+					undressCount += 1
+					_playExpress = "angry"
+					if undressCount >= 10
+						_playSound = SayStateNakedIrritateSound
+						undressCount = 0
+					else
+						_playSound = SayStateNakedShockSound					
+					endif
+				else 
+					_playSound = SayStateNakedComfortSound
+				endif
+				
+				if _playSound 
+					SoundCoolTimePlay(_playSound, _delay=2.5, _express="sad")
+					shouldPlayNaked = false
+				endif				
+			else
+				; 10% 확률로 감탄사 제공
+				if playDressSound && Utility.randomInt(1,10) == 5
+					if  playDressExpress == "hate"
+						playDressSound = SayReactionDisappointSound
+					else 
+						playDressSound = SayReactionSatisfactionSound						
+					endif
+				endif
+				
+				SoundCoolTimePlay(playDressSound, _delay = playDressAnimationDelay, _express=playDressExpress)
+
+				if playClotheCheckAnimation != ""
+					if pcVoiceMCM.enableDressMotion && !playerRef.isSwimming() && !playerRef.IsSprinting()
+						; 카메라 기능 오류 있음
+						; int _cameraMode = Game.GetCameraState()
+						; Game.ForceThirdPerson()
+						Debug.SendAnimationEvent(playerRef, playClotheCheckAnimation + "Start")
+						Utility.Wait(playDressAnimationDelay)
+						Debug.SendAnimationEvent(playerRef, playClotheCheckAnimation + "End")
+						Utility.Wait(0.2)
+
+						if playDressExpress != ""					
+							if playDressExpress == "happy"
+								playDressAnimationDelay = 3.0
+								SoundCoolTimePlay(SayEmotionPrettyLaughSound, _delay=0.7, _express=playDressExpress)
+							elseif playDressExpress == "sexy"
+								playDressAnimationDelay = 4.5
+								SoundCoolTimePlay(SayEmotionSexyLaughSound, _delay=0.7, _express=playDressExpress)
+							elseif playDressExpress == "hate"
+								SoundCoolTimePlay(SayEmotionSighSound, _delay=0.2, _express=playDressExpress)
+								playDressAnimationDelay = 1.5
+							elseif playDressExpress == "cute"
+								SoundCoolTimePlay(SayEmotionSighSound, _delay=0.7, _express=playDressExpress)
+								playDressAnimationDelay = 3.0
+							endif
+
+							Debug.SendAnimationEvent(playerRef, "Imm" + playDressExpress + "Start_"+ Utility.randomInt(1,3))
+							Utility.Wait(playDressAnimationDelay)
+						endif
+						Debug.SendAnimationEvent(playerRef, "IdleForceDefaultState")						
+						; if _cameraMode == 0 ; firstPerson
+						; 	Game.ForceFirstPerson()
+						; endif
+					endif
+					clearRunningPlayDress()
+				endif
+			endif
+		endif
+		isInventoryMode = false
+	endif
+endEvent
 ;
 ;	Cloth status
 ;
@@ -57,31 +169,33 @@ Event OnObjectUnequipped(Form akBaseObject, ObjectReference akReference)
 		; float  _speechBonus = 0.0
 		; float  _speedBonus = 0.0 
 		
-		int _slotMask = _armor.GetSlotMask()
+		; int _slotMask = _armor.GetSlotMask()
 
-		if _slotMask == 0x00000002
-			if _armor.HasKeyWordString("HairStyleLong")
-				; _speechBonus = -3.0
-			elseif _armor.HasKeyWordString("HairStyleShort")
-				; _speechBonus = -1.0
-			elseif _armor.HasKeyWordString("HairStylePony")
-				; _speechBonus = -1.0
-			endif
-		endif 
+		; if _slotMask == 0x00000002
+		; 	if _armor.HasKeyWordString("HairStyleLong")
+		; 		; _speechBonus = -3.0
+		; 	elseif _armor.HasKeyWordString("HairStyleShort")
+		; 		; _speechBonus = -1.0
+		; 	elseif _armor.HasKeyWordString("HairStylePony")
+		; 		; _speechBonus = -1.0
+		; 	endif
+		; endif 
 
-		if _slotMask == 0x00000080 || _slotMask == 0x00800000
-			if _armor.HasKeyWordString("ArmorHeels")
-				; _speechBonus = -3.0
-				; _speedBonus = -5.0
-			elseif  _armor.HasKeyWordString("ArmorStocking")
-			else 
-				; _speedBonus = -15.0
-			endif
-		endif
+		; if _slotMask == 0x00000080 || _slotMask == 0x00800000
+		; 	if _armor.HasKeyWordString("ArmorHeels")
+		; 		; _speechBonus = -3.0
+		; 		; _speedBonus = -5.0
+		; 	elseif  _armor.HasKeyWordString("ArmorStocking")
+		; 	else 
+		; 		; _speedBonus = -15.0
+		; 	endif
+		; endif
 
-		if _slotMask == 0x00000004 || _slotMask == 0x00400000
-			if _armor.HasKeyWordString("ClothingDress") || _armor.HasKeyWordString("ClothingRobe") || _armor.HasKeyWordString("ClothingWedding") || _armor.HasKeyWordString("ClothingShortSkirt") || _armor.HasKeyWordString("ClothingLongSkirt")
-				wornDress.setValue(0)
+		pcVoiceMCM.updateActorArmorStatus(playerRef)
+
+		if Math.LogicalAnd(_slotMask, 0x00000004) == 0x00000004	; clothes
+			if checkDressClothes(_armor)
+				wornDress.setValue(1)
 			endif
 			
 			if _armor.HasKeyWordString("ClothingSlutty") 
@@ -91,34 +205,15 @@ Event OnObjectUnequipped(Form akBaseObject, ObjectReference akReference)
 			elseif _armor.HasKeyWordString("ClothingBeauty")
 				; _speechBonus = -5.0
 			endif
+			shouldPlayNaked = true
+
+			if !isInventoryMode
+				SoundCoolTimePlay(SayStateNakedShockSound, _delay=2.5, _express="sad")
+			endif 
 		endif
 
 		; playerRef.SetActorValue("Speechcraft", playerRef.GetActorValue("Speechcraft") + _speechBonus)
 		; playerRef.SetActorValue("speedmult", playerRef.GetActorValue("speedmult") + _speedBonus)
-
-		pcVoiceMCM.updateActorArmorStatus(playerRef)
-
-		if !playerRef.IsInCombat()
-			if pcVoiceMCM.isNaked
-				; naked 출력
-				if !pcVoiceMCM.isInHome
-					undressCount += 1
-					_playExpress = "angry"
-					if undressCount >= 10
-						_playSound = SayStateNakedIrritateSound
-						undressCount = 0
-					else
-						_playSound = SayStateNakedShockSound					
-					endif
-				else 
-					_playSound = SayStateNakedComfortSound
-				endif
-			endif
-
-			if _playSound 
-				SoundCoolTimePlay(_playSound, _express=_playExpress)
-			endif
-		endif
 	endif	
 EndEvent
 
@@ -128,168 +223,165 @@ Event OnObjectEquipped(Form akBaseObject, ObjectReference akReference)
 		return 
 	endif
 
-	int _dressAniType = 0
+	; if _dressAniType == 1
+	; 	Debug.SendAnimationEvent(playerRef, "ImmCheckHair")
+	; 	Utility.Wait(3.0)
+	; elseif _dressAniType == 2
+	; 	Debug.SendAnimationEvent(playerRef, "ImmCheckBoots")
+	; 	Utility.Wait(2.5)
+	; elseif _dressAniType == 3
+	; 	Debug.SendAnimationEvent(playerRef,"ImmCheckClothes")
+	; 	Utility.Wait(3.0)
+	; elseif _dressAniType == 4
+	; 	Debug.SendAnimationEvent(playerRef,"ImmCheckGlove")
+	; 	Utility.Wait(3.0)
+	; elseif _dressAniType == 5
+	; 	Debug.SendAnimationEvent(playerRef,"ImmCheckPanty")
+	; 	Utility.Wait(3.0)
+	; endif 
+
+	; string playClotheCheckAnimation = ""	; "ImmCheckHair", "ImmCheckBoots", "ImmCheckGlove", "ImmCheckPanty"
 	Armor _armor = akBaseObject as armor
 
-	if _armor		
-		pcVoiceMCM.updateActorArmorStatus(playerRef)
-		Sound _playSound = none
-		String _playExpress = "happy"
-		; float  _speechBonus = 0.0
-		; float  _speedBonus = 0.0
-		bool   _isHate = false
-		bool   _isHappy = false
-		; bool   _isSexy = false
+	if _armor				
+		pcVoiceMCM.updateActorArmorStatus(playerRef)		
 
 		int _slotMask = _armor.GetSlotMask()
-		
+
+		; pcVoiceMCM.log("slot " + _slotMask)
+	
 		if _slotMask == 0x00000002
-			_dressAniType = 1
+			playDressAnimationDelay = 3.0
+			playClotheCheckAnimation = "ImmCheckHair"
+			playDressExpress = "happy"
 			if _armor.HasKeyWordString("HairStyleLong")
 				; _speechBonus = 3.0
-				_playSound = SayReactionLongHairSound
-			elseif _armor.HasKeyWordString("HairStyleShort")
+				playDressSound = SayReactionLongHairSound				
+			elseif _armor.HasKeyWordString("HairStyleShort")				
 				; _speechBonus = 1.0
-				_playSound = SayReactionShortHairSound
-			elseif _armor.HasKeyWordString("HairStylePony")
+				playDressSound = SayReactionShortHairSound
+			elseif _armor.HasKeyWordString("HairStyleBang")
+				playDressExpress = "cute"
+				; _speechBonus = 3.0
+				playDressSound = SayReactionBangHairSound				
+			elseif _armor.HasKeyWordString("HairStylePonyTail")
+				playDressExpress = "cute"
 				; _speechBonus = 1.0
-				_playSound = SayReactionPonyHairSound
-			elseif _armor.HasKeyWordString("HairStylePig")
+				playDressSound = SayReactionPonyHairSound
+			elseif _armor.HasKeyWordString("HairStylePigTail")
 				; _speechBonus = 1.0
-				_playSound = SayReactionPigHairSound
+				playDressExpress = "cute"
+				playDressSound = SayReactionPigHairSound
 			elseif _armor.HasKeyWordString("HairStyleBold")
 				; _speechBonus = 1.0
-				_playSound = SayReactionBoldHairSound		
-				_isHate = true		
-			else 
-				_dressAniType = 2
-				_playSound = SayReactionNormalClothSound
+				playDressSound = SayReactionBoldHairSound		
+				playDressExpress = "hate"
 			endif			
-		elseif _slotMask == 0x00000080 
-			if _armor.HasKeyWordString("ArmorHeels") || _armor.HasKeyWordString("ArmorShortBoots") || _armor.HasKeyWordString("ArmorLongBoots")
+		elseif _slotMask ==	0x01000000 || _slotMask == 0x00004000 || _slotMask == 0x00000020; mask or necklace
+			playDressAnimationDelay = 3.0
+			playClotheCheckAnimation = "ImmCheckNecklace"
+			playDressSound = SayReactionMaskSound
+			if _armor.HasKeyWordString("ClothingVeinMask")
+				playDressSound = SayReactionVeinMaskSound
+			endif
+		elseif _slotMask == 0x00000080
+			playDressAnimationDelay = 4.0			
+			playClotheCheckAnimation = "ImmCheckBoots"
+			playDressSound = SayDefaultSound
+			if _armor.HasKeyWordString("ArmorHeels") || _armor.HasKeyWordString("ArmorLongBoots")
 				; _speechBonus = 3.0
-				_playSound = SayReactionHeelsSound			
-			else
-				_playSound = SayReactionNormalClothSound
-			endif
-			_dressAniType = 2
-		elseif _slotMask == 0x00800000
-			if _armor.HasKeyWordString("ArmorStocking")
-				_playSound = SayReactionStockingSound
-			else
-				_playSound = SayReactionNormalClothSound
-			endif
+				playDressSound = SayReactionHeelsSound
+			endif			
+		elseif _slotMask == 0x00800000 		; stocking
+			playDressAnimationDelay = 4.5
+			playClotheCheckAnimation = "ImmCheckStocking"
+			playDressSound = SayReactionStockingSound	
+			; ArmorStocking
+		elseif _slotMask == 0x00080000		; panties
+			playDressAnimationDelay = 3.0
+			playDressSound = SayReactionPantyClothSound
+			playClotheCheckAnimation = "ImmCheckPanties"
+			if _armor.HasKeyWordString("ClothingStocking") 
+				playDressAnimationDelay = 4.5
+				playClotheCheckAnimation = "ImmCheckStocking"
+				playDressSound = SayReactionStockingSound	
+			endif 
+			; ArmorStocking
 		elseif Math.LogicalAnd(_slotMask, 0x00000004) == 0x00000004
-			if Math.LogicalAnd(_slotMask, 0x00400000) == 0x00400000	; checkpanty
-				_playSound = SayReactionPantyClothSound
-				_dressAniType = 5
-			else 
-				_dressAniType = 3
-				if _armor.HasKeyWordString("ClothingDress") || _armor.HasKeyWordString("ClothingRobe") || _armor.HasKeyWordString("ClothingWedding") || _armor.HasKeyWordString("ClothingShortSkirt") || _armor.HasKeyWordString("ClothingLongSkirt")
-					wornDress.setValue(1)
-				endif
+			playDressAnimationDelay = 3.0
+			playClotheCheckAnimation = "ImmCheckClothes"
+			playDressSound = SayDefaultSound
+			if checkDressClothes(_armor)
+				wornDress.setValue(1)
+			endif
 
+			if Math.LogicalAnd(_slotMask, 0x00000004) == 0x00000004	; clothes
+				shouldPlayNaked = false
+				clearRunnintSoundRes()
 				if _armor.HasKeyWordString("ClothingSlutty") || _armor.HasKeyWordString("ClothingSlave")
 					; _speechBonus = -3.0
-					_playSound = SayReactionSluttyClothSound
-					_playExpress = "sad"	
-					_isHate = true
+					playDressSound = SayReactionSluttyClothSound
+					playDressExpress = "hate"
 				elseif _armor.HasKeyWordString("ClothingSexy") || _armor.HasKeyWordString("ClothingLingerie") ||  _armor.HasKeyWordString("ClothingSwimming")
 					; _speechBonus = 3.0
-					_playSound = SayReactionSexyClothSound
-					; _isSexy = true
-				elseif _armor.HasKeyWordString("ClothingBeauty") || _armor.HasKeyWordString("ClothingWedding") || _armor.HasKeyWordString("ClothingShortSkirt") || _armor.HasKeyWordString("ClothingLongSkirt")
+					playDressSound = SayReactionSexyClothSound
+					playDressExpress = "sexy"
+				elseif _armor.HasKeyWordString("ClothingBeauty") || _armor.HasKeyWordString("ClothingWeddingDress") || _armor.HasKeyWordString("ClothingShortSkirt")
 					; _speechBonus = 5.0
-					_isHappy = true
-					_playSound = SayReactionBeautyClothSound
+					playDressExpress = "happy"
+					playDressSound = SayReactionBeautyClothSound
+				elseif _armor.HasKeyWordString("ClothingCute") || _armor.HasKeyWordString("ClothingLongSkirt")
+					playDressExpress = "cute"
+					playDressSound = SayReactionCuteClothSound
 				elseif _armor.HasKeyWordString("ClothingPoor")
-					_playSound = SayReactionPoorClothSound
-					_isHate = true
+					playDressSound = SayReactionPoorClothSound
+					playDressExpress = "hate"
 				elseif _armor.HasKeyWordString("ClothingRich") || _armor.HasKeyWordString("ClothingDress")
-					_playSound = SayReactionFancyClothSound
-					_isHappy = true
-				elseif _armor.HasKeyWordString("ClothingPanty") || _armor.HasKeyWordString("ClothingSexyPanty") || _armor.HasKeyWordString("ClothingSluttyPanty")
-					_playSound = SayReactionPantyClothSound
-					_dressAniType = 5				
+					playDressExpress = "happy"
+					playDressSound = SayReactionFancyClothSound
+				elseif _armor.HasKeyWordString("ClothingPanties")
+					playDressSound = SayReactionPantyClothSound
+					playClotheCheckAnimation = "ImmCheckPanties"
+				elseif _armor.HasKeyWordString("ClothingSexyPanties")
+					playDressSound = SayReactionSluttyClothSound
+					playClotheCheckAnimation = "ImmCheckPanties"
+					playDressExpress = "sexy"
 				else
-					_playSound = SayReactionNormalClothSound
+					playDressSound = SayReactionNormalClothSound
 				endif
-			endif 			
+			elseif Math.LogicalAnd(_slotMask, 0x00400000) == 0x00400000	; checkpanty
+				playDressSound = SayReactionPantyClothSound
+				playClotheCheckAnimation = "ImmCheckPanties"
+			endif
 		elseif _slotMask == 0x00400000 ; panty
-			_playSound = SayReactionPantyClothSound
-			_dressAniType = 5
-		elseif _slotMask == 0x00000008	; glove
-			_playSound = SayDefaultSound
-			_dressAniType = 4
-		else 			
+			playDressAnimationDelay = 3.0
+			playDressSound = SayReactionPantyClothSound
+			playClotheCheckAnimation = "ImmCheckPanties"
+		elseif _slotMask == 0x00000008 || _slotMask == 0x00000040	; glove or ring
+			playDressAnimationDelay = 3.0
+			playDressSound = SayDefaultSound
+			playClotheCheckAnimation = "ImmCheckGlove"
+			if _armor.HasKeyWordString("ClothingRingSayEng")
+				playDressExpress = "hate"
+				playDressSound = SayDefaultSpecialEngSound
+				pcVoiceMCM.log("SayDefaultSpecialEngSound")
+			elseif _armor.HasKeyWordString("ClothingRingSayKor")
+				playDressExpress = "hate"
+				pcVoiceMCM.log("SayDefaultSpecialKorSound")
+				playDressSound = SayDefaultSpecialKorSound
+			endif
+		elseif _slotMask ==	0x02000000  ; tongue
+			playDressAnimationDelay = 3.0
+			playDressSound = SayDefaultSound	
+		else
+			playClotheCheckAnimation = "ImmCheckDefault"
 			if _armor.HasKeyWordString("ClothingSexyBelt")
-				_playSound = SayDefaultSound
-				_dressAniType = 3			
+				playDressSound = SayReactionSexyClothSound			
 			endif
 		endif
 
 		; playerRef.SetActorValue("Speechcraft", playerRef.GetActorValue("Speechcraft") + _speechBonus)	
 		; playerRef.SetActorValue("speedmult", playerRef.GetActorValue("speedmult") + _speedBonus)
-
-		if !playerRef.IsInCombat() && pcVoiceMCM.isInventoryMenuMode
-				; 10% 확률로 감탄사 제공
-				if _playSound && Utility.randomInt(1,10) > 9
-					if _isHate 
-						_playSound = SayReactionDisappointSound
-						_playExpress = "sad"
-					else 
-						_playSound = SayReactionSatisfactionSound
-						_playExpress = "happy"
-					endif 
-				endif
-
-				SoundCoolTimePlay(_playSound, _express=_playExpress)				
-				if _dressAniType > 0
-					if pcVoiceMCM.enableDressMotion && !playerRef.isSwimming() && !playerRef.IsSprinting()
-						int _cameraMode = Game.GetCameraState()
-						if _cameraMode == 0 ; firstPerson
-							Game.ForceThirdPerson()
-						endif
-
-						if _dressAniType == 1
-							Debug.SendAnimationEvent(playerRef, "ImmCheckHair")
-							Utility.Wait(3.0)
-						elseif _dressAniType == 2
-							Debug.SendAnimationEvent(playerRef, "ImmCheckBoots")
-							Utility.Wait(2.5)
-						elseif _dressAniType == 3
-							Debug.SendAnimationEvent(playerRef,"ImmCheckClothes")
-							Utility.Wait(3.0)
-						elseif _dressAniType == 4
-							Debug.SendAnimationEvent(playerRef,"ImmCheckGlove")
-							Utility.Wait(3.0)
-						elseif _dressAniType == 5
-							Debug.SendAnimationEvent(playerRef,"ImmCheckPanty")
-							Utility.Wait(3.0)
-						endif 
-	
-						if _isHappy
-							SoundCoolTimePlay(SayDefaultLaughSound, _delay=0.0, _express="happy")
-							Debug.SendAnimationEvent(playerRef,"ImmHappy" + Utility.randomInt(1,3))
-							Utility.Wait(5.0)
-						; elseif _isSexy
-						; 	SoundCoolTimePlay(SayDefaultFeelingSound, _delay=0.0, _express="sexy")
-						; 	Debug.SendAnimationEvent(playerRef,"ImmSexy" + Utility.randomInt(1,3))
-						; 	Utility.Wait(5.0)
-						elseif _isHate
-							; SoundCoolTimePlay(SayDefaultFeelingSound, _delay=0.0, _express="sad")
-							Debug.SendAnimationEvent(playerRef,"ImmHate" + Utility.randomInt(1,2))
-							Utility.Wait(3.0)
-						endif
-						
-						if _cameraMode == 0 ; firstPerson
-							Game.ForceFirstPerson()
-						endif
-	
-						Debug.SendAnimationEvent(playerRef, "IdleForceDefaultState")
-					endif
-				endif
-		endif
 
 		; pcVoiceMCM.log("_speechBonus " + _speechBonus + ", _speedBonus " + _speedBonus)
 		; pcVoiceMCM.log("Speechcraft " + playerRef.GetActorValue("Speechcraft"))
@@ -304,11 +396,11 @@ Event OnUpdate()
 
 	; sound play
 	if runningCoolTimeSoundRes != None
-		if runningCoolTimeSoundRes == SayStateNakedShockSound || runningCoolTimeSoundRes == SayStateNakedIrritateSound
+		if runningCoolTimeSoundRes == SayStateNakedShockSound || runningCoolTimeSoundRes == SayStateNakedIrritateSound || runningCoolTimeSoundRes == SayStateNakedComfortSound
 			; nake 상태 한번더 확인
 			if !pcVoiceMCM.isNaked
 				pcVoiceMCM.soundCoolTime = -3.0
-				return
+				return						
 			endif
 		endif
 
@@ -326,7 +418,31 @@ endEvent
 ;
 ;	Utility
 ;
-function SoundCoolTimePlay(Sound _sound, float _volume = 0.8, float _coolTime = 1.5, float _delay = 0.5, String _express)
+bool function checkDressClothes()
+	bool _isDress = false
+	if _armor.HasKeyWordString("ClothingDress") || _armor.HasKeyWordString("ClothingRobe") || _armor.HasKeyWordString("ClothingWedding") || _armor.HasKeyWordString("ClothingShortSkirt") || _armor.HasKeyWordString("ClothingLongSkirt")
+		_isDress = true
+	endif
+
+	return _isDress
+endfunction 
+
+function clearRunningPlayDress()
+	playDressSound = none
+	playDressExpress = ""
+	playClotheCheckAnimation = ""
+	playDressAnimationDelay = 2.0
+	playDressSoundDelay = 0.3
+	isDressPlay = false
+endFunction
+
+function clearRunnintSoundRes()
+	UnregisterForUpdate()
+	runningCoolTimeSoundRes = none	
+	pcVoiceMCM.soundCoolTime = 0.0
+endFunction
+
+function SoundCoolTimePlay(Sound _sound, float _volume = 0.8, float _coolTime = 2.0, float _delay = 0.5, String _express)
 	if playerRef.IsSwimming() || (playerRef.IsInCombat() && _sound != SayStateNakedShockSound)
 		return
 	endif
@@ -368,6 +484,7 @@ Sound property SayReactionSluttyClothSound Auto
 Sound property SayReactionBeautyClothSound Auto
 Sound property SayReactionSexyClothSound Auto
 Sound property SayReactionNormalClothSound Auto
+Sound property SayReactionCuteClothSound Auto
 Sound property SayReactionPantyClothSound Auto
 Sound property SayReactionPoorClothSound Auto
 Sound property SayReactionFancyClothSound Auto
@@ -375,16 +492,23 @@ Sound property SayReactionStockingSound Auto
 Sound property SayReactionSatisfactionSound Auto
 Sound property SayReactionDisappointSound Auto
 Sound property SayReactionHeelsSound Auto
+Sound property SayReactionMaskSound Auto
+Sound property SayReactionVeinMaskSound Auto
 
 Sound property SayReactionBoldHairSound Auto	; HairStyleBold
 Sound property SayReactionLongHairSound Auto	; HairStyleLong
 Sound property SayReactionShortHairSound Auto	; HairStyleShort
-Sound property SayReactionPonyHairSound Auto	; HairStylePony
-Sound property SayReactionPigHairSound Auto		; HairStylePony
+Sound property SayReactionPonyHairSound Auto	; HairStylePonyTail
+Sound property SayReactionPigHairSound Auto		; HairStylePigTail
 Sound property SayReactionBangHairSound Auto	; HairStyleBang
 
-Sound property SayDefaultLaughSound Auto
-Sound property SayDefaultFeelingSound Auto
+Sound property SayEmotionSexyLaughSound Auto
+Sound property SayEmotionPrettyLaughSound Auto
+Sound property SayEmotionSighSound Auto
+Sound property SayEmotionEmbarrasSound Auto
+
 Sound property SayDefaultSound Auto
+Sound property SayDefaultSpecialEngSound Auto
+Sound property SayDefaultSpecialKorSound Auto
 
 GlobalVariable Property wornDress Auto

@@ -15,7 +15,7 @@ float  runningCoolTimeSoundCurtime
 float  runningCoolTimeSoundCoolingTime
 
 Event OnInit()
-	initMenu()	
+	; initMenu()	
 EndEvent
 
 event OnLoad()
@@ -24,12 +24,11 @@ event OnLoad()
 	init()
 endEvent
 
-function initMenu()	
-	UnregisterForAllMenus()
-	RegisterForMenu("InventoryMenu")
-	RegisterForMenu("RaceSex Menu")
-	RegisterForMenu("Dialogue Menu")
-endFunction
+; function initMenu()	
+; 	; UnregisterForAllMenus()
+; 	RegisterForMenu("RaceSex Menu")
+; 	RegisterForMenu("Dialogue Menu")
+; endFunction
 
 ; save -> load 시 호출
 Event OnPlayerLoadGame()
@@ -51,6 +50,11 @@ function setup()
 endFunction
 
 function init ()
+	UnregisterForMenu("RaceSex Menu")
+	UnregisterForMenu("Dialogue Menu")
+	RegisterForMenu("RaceSex Menu")
+	RegisterForMenu("Dialogue Menu")
+
 	runningCoolTimeSoundRes = None
 	runningCoolTimeSoundVolume = 0.0
 	runningCoolTimeExpress = "happy"
@@ -265,8 +269,6 @@ endEvent
 ;
 Event OnMenuOpen(string menuName)		
 	if menuName == "RaceSex Menu"			
-	elseif menuName == "InventoryMenu"
-		pcVoiceMCM.isInventoryMenuMode = true
 	elseif menuName == "Dialogue Menu"
 		while isControlling
 			Utility.WaitMenuMode(0.1)
@@ -319,9 +321,6 @@ Event OnMenuClose(string menuName)
 				pcVoiceMCM.disableOption()
 			endif
 		endif
-	elseif menuName == "InventoryMenu"
-		utility.waitMenuMode(1.5)
-		pcVoiceMCM.isInventoryMenuMode = false
 	endif
 endEvent
 
@@ -433,35 +432,37 @@ function playMonologueSound(bool _shortCoolTime)
 	float _currentTime = Utility.GetCurrentRealTime()
 
 	if (_currentHour > 6 || _currentHour <= 8) && _currentTime > coolTimeMap[24]
-		SoundCoolTimePlay(SayDayMorningSound, _coolTime=10.0, _mapIdx=24,  _mapCoolTime=300.0)
-	elseif (_currentHour > 12 || _currentHour <= 14) && _currentTime > coolTimeMap[24]
-		SoundCoolTimePlay(SayDayAfterNoonSound, _coolTime=10.0, _mapIdx=24,  _mapCoolTime=300.0)				
-	elseif (_currentHour >= 22 || _currentHour <= 3) && _currentTime > coolTimeMap[24]
-		SoundCoolTimePlay(SayDayNightSound, _coolTime=10.0, _mapIdx=24,  _mapCoolTime=300.0)
+		SoundCoolTimePlay(SayDayMorningSound, _coolTime=4.0, _mapIdx=24,  _mapCoolTime=300.0)
+	elseif (_currentHour > 11 || _currentHour <= 13) && _currentTime > coolTimeMap[24]
+		SoundCoolTimePlay(SayDayAfterNoonSound, _coolTime=4.0, _mapIdx=24,  _mapCoolTime=300.0)
+	elseif (_currentHour >= 18 || _currentHour <= 20) && _currentTime > coolTimeMap[24]
+		SoundCoolTimePlay(SayDayEventingSound, _coolTime=4.0, _mapIdx=24,  _mapCoolTime=300.0)
+	elseif (_currentHour >= 22 || _currentHour <= 4) && _currentTime > coolTimeMap[24]
+		SoundCoolTimePlay(SayDayNightSound, _coolTime=4.0, _mapIdx=24,  _mapCoolTime=300.0)
 	else
 		_shouldPlayEtc = true
 		if pcVoiceMCM.isInRiften
 			if Utility.RandomInt(0, 2) > 0
-				SoundCoolTimePlay(SayAreaRiftenSound, _coolTime=10.0, _mapIdx=20,  _mapCoolTime=30.0)
+				SoundCoolTimePlay(SayAreaRiftenSound, _coolTime=8.0, _mapIdx=20,  _mapCoolTime=30.0)
 				_shouldPlayEtc = false
 			endif	
 		elseif pcVoiceMCM.isInRiverwood
 			if Utility.RandomInt(0, 2) > 0
-				SoundCoolTimePlay(SayAreaRiverWoodSound, _coolTime=10.0, _mapIdx=20,  _mapCoolTime=30.0)
+				SoundCoolTimePlay(SayAreaRiverWoodSound, _coolTime=8.0, _mapIdx=20,  _mapCoolTime=30.0)
 				_shouldPlayEtc = false
 			endif
 		elseif pcVoiceMCM.isInWhiterun
 			if Utility.RandomInt(0, 2) > 0
-				SoundCoolTimePlay(SayAreaWhiteRunSound, _coolTime=10.0, _mapIdx=20,  _mapCoolTime=30.0)
+				SoundCoolTimePlay(SayAreaWhiteRunSound, _coolTime=8.0, _mapIdx=20,  _mapCoolTime=30.0)
 				_shouldPlayEtc = false
 			endif
 		elseif pcVoiceMCM.isInSolitude
 			if Utility.RandomInt(0, 2) > 0
-				SoundCoolTimePlay(SayAreaSolitudeRunSound, _coolTime=10.0, _mapIdx=20,  _mapCoolTime=30.0)
+				SoundCoolTimePlay(SayAreaSolitudeRunSound, _coolTime=8.0, _mapIdx=20,  _mapCoolTime=30.0)
 				_shouldPlayEtc = false
 			endif		
 		elseif pcVoiceMCM.isInCampsite
-			SoundCoolTimePlay(SayAreaCampSiteSound, _coolTime=10.0, _mapIdx=20,  _mapCoolTime=30.0)
+			SoundCoolTimePlay(SayAreaCampSiteSound, _coolTime=8.0, _mapIdx=20,  _mapCoolTime=30.0)
 			_shouldPlayEtc = false
 		endif
 
@@ -634,6 +635,11 @@ endFunction
 ImmersivePcVoiceMCM property pcVoiceMCM Auto
 
 Faction property FactionBanditFriend Auto
+Faction property FactionVampaireFriend Auto
+Faction property FactionGiantFriend Auto
+Faction property FactionAnimalFriend Auto
+Faction property FactionWerewolfFriend Auto
+Faction property FactionWolfFriend Auto
 
 Actor property playerRef Auto
 
@@ -648,6 +654,7 @@ Sound property SayMonologueSound Auto
 ; day
 Sound property SayDayMorningSound Auto
 Sound property SayDayAfterNoonSound Auto
+Sound property SayDayEventingSound Auto
 Sound property SayDayNightSound Auto
 
 ; Area
@@ -696,6 +703,7 @@ Sound property SayDialogueNormalChildSound Auto
 Sound property SayDialogueNormalGhostSound Auto
 Sound property SayDialogueNormalEnemySound Auto
 Sound property SayDialogueNormalPostmanSound Auto
+Sound property SayDialogueNormalFarmerSound Auto
 Sound property SayDialogueNormalLoverSound Auto
 Sound property SayDialogueNormalLoverLoveSound Auto
 Sound property SayDialogueNormalFriendSound Auto
@@ -713,7 +721,6 @@ Sound property SayDialogueNormalNakedOnFemaleSound Auto
 Sound property SayDialogueNormalNakedOnMaleSound Auto
 Sound property SayDialogueNormalFaceBeautyOnFemaleSound Auto
 Sound property SayDialogueNormalFaceBeautyOnMaleSound Auto
-
 
 Sound property SayDialoguePassiveSound Auto
 Sound property SayDialoguePassiveGuardSound Auto
@@ -761,6 +768,7 @@ Faction property JobPriestFaction Auto
 Faction property JobJarlFaction Auto
 Faction property JobBlackSmithFaction Auto
 Faction property JobMerchantFaction Auto
+Faction property JobFarmerFaction Auto
 Faction property JobInnKeeperFaction Auto
 Faction property JobDeliveryFaction Auto
 Faction property JobTrainerFaction Auto     	
@@ -771,6 +779,5 @@ Faction property PlayerHousecarlFaction Auto	;  0 default
 Faction property BardSingerFaction Auto			; -1 default
 Faction property CurrentFollowerFaction Auto	; -1 default
 Faction property PotentialMarriageFaction Auto	; -1 default
-
 
 Package property BardSongTravelPackage Auto

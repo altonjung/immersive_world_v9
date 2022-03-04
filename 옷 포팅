@@ -1,0 +1,15 @@
+[Cloth porting 방법]
+
+ARMA  
+	- slot 49
+	- biped Model Osare\Underwear\Panty\SimpleRibbon_1.nif
+
+
+ARMO  49
+	- ARMA 를 연결해야 
+	world model -> Osare\Underwear\Panty\SimpleRibbonGND.nif
+
+TXST
+	- Diffuse  Osare\Underwear\Panty\SimpleRibbon\Beige\Panty.dds
+	- Normal  Osare\Underwear\Panty\SimpleRibbon\Panty_n.dds
+	

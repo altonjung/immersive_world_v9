@@ -6,7 +6,6 @@ Location property prevLocation Auto
 
 bool property isPlayerFemale = true Auto
 bool property isGameRunning Auto
-bool property isInventoryMenuMode Auto
 bool property isWeaponDraw Auto
 
 bool property isNaked Auto
@@ -388,21 +387,33 @@ endfunction
 
 function expression(actor _actor, string _type)
 	if _type == "disgust"
-		_actor.SetExpressionOverride(6, 100)				; disgust
+		_actor.SetExpressionOverride(6, 100)			; disgust
 		MfgConsoleFunc.SetPhoneme(_actor,13,30)			; mouth
 		MfgConsoleFunc.SetModifier(_actor, 0, 10)		; eye left
 		MfgConsoleFunc.SetModifier(_actor, 1, 25)		; eye right
-		; playerRef.SetExpressionPhoneme(14, 20)  ; mouth	
+	elseif 	_type == "pleasure"
+		_actor.SetExpressionOverride(0, 100)			; angry
+		MfgConsoleFunc.SetPhoneme(_actor,13,20)			; mouth
+		MfgConsoleFunc.SetModifier(_actor, 0, 10)		; eye left
+		MfgConsoleFunc.SetModifier(_actor, 1, 25)		; eye right		
+	elseif 	_type == "sexy"		
+		_actor.SetExpressionOverride(0, 100)			; sexy
+		MfgConsoleFunc.SetPhoneme(_actor,13,20)			; mouth
+		MfgConsoleFunc.SetModifier(_actor, 0, 10)		; eye left
+		MfgConsoleFunc.SetModifier(_actor, 1, 25)		; eye right		
 	elseif 	_type == "angry"
-		_actor.SetExpressionOverride(0, 100)				; angry
+		_actor.SetExpressionOverride(0, 100)			; angry
 		MfgConsoleFunc.SetPhoneme(_actor,13,20)			; mouth
 		MfgConsoleFunc.SetModifier(_actor, 0, 10)		; eye left
 		MfgConsoleFunc.SetModifier(_actor, 1, 25)		; eye right
-		; playerRef.SetExpressionPhoneme(14, 20)  ; mouth		
+	elseif 	_type == "hate"
+		_actor.SetExpressionOverride(0, 100)			; angry
+		MfgConsoleFunc.SetPhoneme(_actor,13,20)			; mouth
+		MfgConsoleFunc.SetModifier(_actor, 0, 10)		; eye left
+		MfgConsoleFunc.SetModifier(_actor, 1, 25)		; eye right		
 	elseif 	_type == "happy"
-		_actor.SetExpressionOverride(2, 100)				; happy
-		MfgConsoleFunc.SetPhoneme(_actor,13,10)			; mouth
-		; playerRef.SetExpressionPhoneme(14, 20)  ; mouth		
+		_actor.SetExpressionOverride(2, 100)			; happy
+		MfgConsoleFunc.SetPhoneme(_actor,13,10)			; mouth	
 	else		
 		_actor.ResetExpressionOverrides()
 		MfgConsoleFunc.ResetPhonemeModifier(_actor) 		

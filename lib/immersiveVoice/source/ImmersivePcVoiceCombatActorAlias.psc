@@ -270,7 +270,11 @@ Event OnActorKilled(Actor akVictim, Actor akKiller)
 				if playerRef.IsWeaponDrawn()
 					if pcVoiceMCM.enableCombatMotion
 						playerRef.SheatheWeapon()
-						Utility.wait(0.5)
+
+						; Debug.SendAnimationEvent(playerRef, "ImmPrayKneelStart")
+						; Utility.Wait(3.0)
+						; Debug.SendAnimationEvent(playerRef, _clotheCheckAnimation + "End")
+						; Utility.wait(3.0)
 					endif
 				endif
 			endif

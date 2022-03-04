@@ -31,7 +31,7 @@ bool   isLockingMode
 
 int    footstepCount
 Event OnInit()
-	initMenu()	
+	; initMenu()	
 EndEvent
 
 event OnLoad()
@@ -45,19 +45,19 @@ Event OnPlayerLoadGame()
 	init()
 EndEvent
 
-function initMenu()	
-	UnregisterForAllMenus()
-	RegisterForMenu("MapMenu")
-	RegisterForMenu("Journal Menu")
-	RegisterForMenu("ContainerMenu")
-	RegisterForMenu("Lockpicking Menu")
-	RegisterForMenu("Sleep/Wait Menu")
-	RegisterForMenu("BarterMenu")
-	RegisterForMenu("Crafting Menu")
-	RegisterForMenu("Training Menu")
-	RegisterForMenu("Book Menu")
-	RegisterForMenu("StatsMenu")
-endFunction
+; function initMenu()	
+; 	; UnregisterForAllMenus()
+; 	RegisterForMenu("MapMenu")
+; 	RegisterForMenu("Journal Menu")
+; 	RegisterForMenu("ContainerMenu")
+; 	RegisterForMenu("Lockpicking Menu")
+; 	RegisterForMenu("Sleep/Wait Menu")
+; 	RegisterForMenu("BarterMenu")
+; 	RegisterForMenu("Crafting Menu")
+; 	RegisterForMenu("Training Menu")
+; 	RegisterForMenu("Book Menu")
+; 	RegisterForMenu("StatsMenu")
+; endFunction
 
 function registerAction ()	
 	regAnimation()
@@ -68,6 +68,28 @@ function setup()
 endFunction
 
 function init ()		
+	UnregisterForMenu("MapMenu")
+	UnregisterForMenu("Journal Menu")
+	UnregisterForMenu("ContainerMenu")
+	UnregisterForMenu("Lockpicking Menu")
+	UnregisterForMenu("Sleep/Wait Menu")
+	UnregisterForMenu("BarterMenu")
+	UnregisterForMenu("Crafting Menu")
+	UnregisterForMenu("Training Menu")
+	UnregisterForMenu("Book Menu")
+	UnregisterForMenu("StatsMenu")
+
+	RegisterForMenu("MapMenu")
+	RegisterForMenu("Journal Menu")
+	RegisterForMenu("ContainerMenu")
+	RegisterForMenu("Lockpicking Menu")
+	RegisterForMenu("Sleep/Wait Menu")
+	RegisterForMenu("BarterMenu")
+	RegisterForMenu("Crafting Menu")
+	RegisterForMenu("Training Menu")
+	RegisterForMenu("Book Menu")
+	RegisterForMenu("StatsMenu")
+
 	underWaterSoundId = 0
 	underWaterSoundVolume = 0.0
 
@@ -293,10 +315,8 @@ Event OnMagicEffectApply(ObjectReference akCaster, MagicEffect akEffect)
 			else 
 				SoundCoolTimePlay(SayActionRitualSound, _delay=0.5, _coolTime=3.0)
 
-				int _cameraMode = Game.GetCameraState()
-				if _cameraMode == 0 ; firstPerson
-					Game.ForceThirdPerson()
-				endif
+				; int _cameraMode = Game.GetCameraState()
+				; Game.ForceThirdPerson()
 
 				bool _isWeaponDraw = false
 				if playerRef.IsWeaponDrawn()						
@@ -316,9 +336,9 @@ Event OnMagicEffectApply(ObjectReference akCaster, MagicEffect akEffect)
 					playerRef.DrawWeapon()
 				endif
 
-				if _cameraMode == 0 ; firstPerson
-					Game.ForceFirstPerson()
-				endif
+				; if _cameraMode == 0 ; firstPerson
+				; 	Game.ForceFirstPerson()
+				; endif
 			endif
 			
 		elseif akEffect.HasKeyWordString("MagicAlchHarmful")	; alchol
@@ -405,7 +425,7 @@ Event OnSit(ObjectReference akFurniture)
 			SoundCoolTimePlay(SayActionChoppingSound, _delay=0.2, _coolTime=3.0, _mapIdx=8, _mapCoolTime=3.0)
 		endif
 	elseif furnitureType == 0 || furnitureType == 2  ; sit
-		if pcVoiceMCM.isNaked
+		if pcVoiceMCM.isNaked 
 			SoundCoolTimePlay(SayStateNakedSound, _delay=0.5, _coolTime=5.0, _mapIdx=2, _mapCoolTime=15)
 		elseif pcVoiceMCM.isDrunken
 			SoundCoolTimePlay(SayStateNakedSound, _delay=0.5, _coolTime=5.0, _mapIdx=2, _mapCoolTime=15)
@@ -419,10 +439,14 @@ Event OnSit(ObjectReference akFurniture)
 			elseif pcVoiceMCM.isBareFoot
 				SoundCoolTimePlay(SayStateBareFeetSound, _delay=0.5, _coolTime=5.0, _mapIdx=2, _mapCoolTime=15)
 			else
-				if Utility.randomInt(0, 3) >= 1
-					SoundCoolTimePlay(SayActionSitSound, _delay=0.5, _coolTime=3.0, _mapIdx=2, _mapCoolTime=15)
+				if Utility.randomInt(1, 5) == 1
+					SoundCoolTimePlay(SayMonologueSound, _delay=0.5, _coolTime=7.0, _mapIdx=2, _mapCoolTime=15)					
 				else 
-					SoundCoolTimePlay(SayMonologueSound, _delay=0.5, _coolTime=7.0, _mapIdx=2, _mapCoolTime=15)
+					if akFurniture.HasKeyWordString("isThroneSit")
+						SoundCoolTimePlay(SayActionSitThroneSound, _delay=0.5, _coolTime=3.0, _mapIdx=2, _mapCoolTime=15)
+					else 
+						SoundCoolTimePlay(SayActionSitSound, _delay=0.5, _coolTime=3.0, _mapIdx=2, _mapCoolTime=15)
+					endif
 				endif
 			endif	
 		endif
@@ -600,6 +624,7 @@ Sound property SayActionDragonSoulSound Auto
 Sound property SayActionJumpUpSound Auto
 ; Sound property SayActionLevelUpSound Auto
 Sound property SayActionSitSound Auto
+Sound property SayActionSitThroneSound Auto
 Sound property SayActionSitDefaultSound Auto
 Sound property SayActionSleepSound Auto
 Sound property SayActionGoToBedSound Auto
