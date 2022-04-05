@@ -191,7 +191,6 @@ function addActorStage(sslBaseAnimation anim, int actorID, int stageInfo)
   String sfxExpressionType = JMap.getStr(stageInfo, "sfxExpressionType")
   bool   sfxOrgasm = JMap.getInt(stageInfo, "sfxOrgasm") as bool
 
-
   anim.AddPositionStage(actorID, eventID, forward=forward, side=side, up=up, rotate=rotate, silent=silent, openmouth=openmouth, strapon=strapOn, sos=sos, sfxAction=sfxAction, sfxVoiceType=sfxVoiceType, sfxSounds=sfxSounds, sfxExpressionType=sfxExpressionType, sfxOrgasm=sfxOrgasm)
 
   ; TODO: SetStageCumID(int Position, int Stage, int CumID, int CumSource = -1)
